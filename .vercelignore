@@ -13,4 +13,6 @@ tests
 .github
 *.log
 *.zip
-index.html
+*.bundle
+# Only exclude the local launcher; public/index.html is required by the server.
+/index.html

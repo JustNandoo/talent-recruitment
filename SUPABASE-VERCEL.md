@@ -79,6 +79,7 @@ Mengaktifkan Supabase memakai database cloud baru. Data SQLite lokal tetap ada, 
 
 | Gejala | Pemeriksaan |
 | --- | --- |
+| Build gagal: `File deployment hilang: public/index.html` | Gunakan `/index.html` (diawali slash) di `.vercelignore`, bukan `index.html`. Aturan tanpa slash juga membuang halaman aplikasi di folder `public`. Push perbaikan lalu deploy ulang. |
 | 503 meminta `DATABASE_URL` | Isi variable Production, kemudian Redeploy. Pastikan format PostgreSQL pooler, bukan URL REST. |
 | 503 meminta password akun | Isi kedua password yang berbeda dan minimal 12 karakter, lalu Redeploy. |
 | 503 koneksi database | Buka Runtime Logs; periksa host/user/password/port connection string dan status proyek Supabase. Database yang paused harus di-resume. |
