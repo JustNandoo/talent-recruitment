@@ -1,0 +1,10 @@
+import { readFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { projectRoot } from '../lib/config.js';
+import { join } from 'node:path';
+const config = JSON.parse(readFileSync(join(projectRoot, 'vercel.json'), 'utf8'));
+if (Number(process.versions.node.split('.')[0]) !== 24) throw new Error('Deployment Vercel memakai Node.js 24.x; periksa Node.js Version.');
+for (const file of ['server.js', 'api/handler.js', 'lib/postgres-store.js', 'public/app.js']) execFileSync(process.execPath, ['--check', file], { cwd: projectRoot, stdio: 'inherit' });
+for (const file of ['public/index.html', 'public/style.css', 'public/serviam-logo.svg', 'docs/bank-soal.pdf', 'db/supabase.sql']) if (!existsSync(join(projectRoot, file))) throw new Error(`File deployment hilang: ${file}`);
+if (config.routes?.[0]?.dest !== '/api/handler') throw new Error('Routing Vercel harus menuju handler server.');
+console.log('Pemeriksaan build Vercel lulus. Koneksi database diperiksa saat runtime, bukan saat build.');

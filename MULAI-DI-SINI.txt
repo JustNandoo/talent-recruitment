@@ -27,3 +27,8 @@ Panduan Visual Studio / VS Code: BUKA-DI-VISUAL-STUDIO.md
 Backup konsisten: npm run backup
 Pengujian: npm test (30 pengujian)
 Operasi produksi: PRODUKSI.md
+
+VERCEL + SUPABASE (VERSI 1.3)
+Baca SUPABASE-VERCEL.md. Buat proyek Supabase, lalu isi DATABASE_URL,
+SUPERADMIN_PASSWORD dan ADMIN_PASSWORD pada Vercel. Tabel dan akun dibuat
+otomatis ketika aplikasi pertama kali dibuka. Jangan mengunggah rahasia ke Git.

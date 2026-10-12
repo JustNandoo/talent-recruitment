@@ -6,6 +6,7 @@ import { loadEnvironment, readConfig } from '../lib/config.js';
 
 loadEnvironment();
 const config = readConfig();
+if (config.databaseUrl) { console.error('Database aktif Supabase: gunakan npm run setup:supabase, kemudian masuk di /penguji.'); process.exit(1); }
 
 if (!stdin.isTTY) { console.error('Jalankan penyiapan akun dari terminal interaktif. Kata sandi tidak akan ditampilkan.'); process.exit(1); }
 const readline = createInterface({ input: stdin, output: stdout });

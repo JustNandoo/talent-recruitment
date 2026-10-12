@@ -27,6 +27,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="server.js" />
+    <Content Include="api\handler.js" />
+    <Content Include="lib\postgres-store.js" />
+    <Content Include="db\supabase.sql" />
+    <Content Include="vercel.json" />
+    <Content Include=".vercelignore" />
+    <Content Include=".env.supabase.example" />
+    <Content Include="scripts\setup-supabase.js" />
+    <Content Include="scripts\check-vercel.js" />
+    <Content Include="tests\cloud.test.js" />
+    <Content Include="tests\postgres.integration.js" />
+    <Content Include="SUPABASE-VERCEL.md" />
     <Content Include="lib\bank.js" />
     <Content Include="lib\browser.js" />
     <Content Include="lib\order.js" />

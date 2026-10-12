@@ -1,0 +1,16 @@
+.git
+.data
+.env
+.env.*
+node_modules
+downloads
+backups
+tests
+.idea
+.vs
+.vscode
+.run
+.github
+*.log
+*.zip
+index.html

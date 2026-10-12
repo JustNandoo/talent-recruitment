@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "framework": null,
+  "installCommand": "npm ci --ignore-scripts --no-audit --no-fund",
+  "buildCommand": "npm run vercel:check",
+  "regions": ["sin1"],
+  "functions": {
+    "api/handler.js": {
+      "maxDuration": 60,
+      "includeFiles": "{public/**,docs/**,db/**}"
+    }
+  },
+  "routes": [{ "src": "/(.*)", "dest": "/api/handler" }]
+}

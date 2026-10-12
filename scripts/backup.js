@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { loadEnvironment, readConfig } from '../lib/config.js';
 loadEnvironment();
 const config = readConfig(), source = join(config.dataDir, 'talenta.sqlite');
+if (config.databaseUrl) throw new Error('Database aktif adalah Supabase/PostgreSQL. Gunakan backup Supabase atau pg_dump sesuai SUPABASE-VERCEL.md; perintah ini hanya untuk SQLite lokal.');
 if (!existsSync(source)) throw new Error('Database belum tersedia. Jalankan aplikasi terlebih dahulu.');
 const folder = resolve(config.dataDir, 'backups');
 mkdirSync(folder, { recursive: true, mode: 0o700 });

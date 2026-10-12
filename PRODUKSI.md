@@ -1,5 +1,7 @@
 # Operasi produksi HRD Division PT Serviam Group Shipyard
 
+Untuk hosting **Vercel + Supabase**, gunakan `SUPABASE-VERCEL.md`. Langkah di bawah membahas alternatif server Docker dengan SQLite persisten.
+
 Paket menyertakan konfigurasi produksi, bukan server internet yang sudah diterbitkan. Hosting/server, domain sebenarnya, DNS dan akses 80/443 perlu disiapkan operator. Undangan adalah **link manual**; SMTP tidak digunakan.
 
 ## Deployment Docker Compose
