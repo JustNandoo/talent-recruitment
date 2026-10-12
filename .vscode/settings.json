@@ -1,0 +1,19 @@
+{
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "files.associations": { "*.njsproj": "xml" },
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/.vs": true
+  },
+  "search.exclude": {
+    "**/.data": true,
+    "**/node_modules": true,
+    "**/.vs": true,
+    "**/test-results": true
+  },
+  "debug.onTaskErrors": "abort"
+}

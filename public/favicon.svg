@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">PT Serviam Group Shipyard</title>
+  <rect width="512" height="512" fill="#fff"/>
+  <g fill="#092c45">
+    <path fill-rule="evenodd" d="M256 5 430 179 256 509 82 179Zm0 16L97 182l159 304 159-304Z"/>
+    <path fill-rule="evenodd" d="M249 71h15v109h109v15L264 409h-15V195H140v-15Zm0 22-88 87h88Zm15 102v181l92-181Z"/>
+    <path d="M316 116 329 123c-10 60-43 100-87 118-23 9-47 13-72 11l-6-14c32 4 60-2 83-14 37-19 60-54 69-108Z"/>
+  </g>
+</svg>

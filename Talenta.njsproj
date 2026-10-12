@@ -1,0 +1,72 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">17.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{F9DB3A37-1E15-4ECF-9AC3-C3DF87FE35B2}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>server.js</StartupFile>
+    <WorkingDirectory>.</WorkingDirectory>
+    <SearchPath></SearchPath>
+    <OutputPath>.</OutputPath>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <ProjectTypeGuids>{3AF33F2E-1136-4D97-BBB7-1795711AC8B8};{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}</ProjectTypeGuids>
+    <NodejsPort>3000</NodejsPort>
+    <StartWebBrowser>false</StartWebBrowser>
+    <NodeExePath Condition="Exists('$(ProgramW6432)\nodejs\node.exe')">$(ProgramW6432)\nodejs\node.exe</NodeExePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="server.js" />
+    <Content Include="lib\bank.js" />
+    <Content Include="lib\browser.js" />
+    <Content Include="lib\order.js" />
+    <Content Include="lib\scoring.js" />
+    <Content Include="lib\store.js" />
+    <Content Include="public\app.js" />
+    <Content Include="public\index.html" />
+    <Content Include="public\style.css" />
+    <Content Include="public\favicon.svg" />
+    <Content Include="public\serviam-logo.svg" />
+    <Content Include="scripts\check-runtime.cjs" />
+    <Content Include="scripts\setup-admin.js" />
+    <Content Include="tests\api.test.js" />
+    <Content Include="tests\launch.test.js" />
+    <Content Include="tests\order.test.js" />
+    <Content Include="tests\scoring.test.js" />
+    <Content Include="package.json" />
+    <Content Include="package-lock.json" />
+    <Content Include="README.md" />
+    <Content Include="BUKA-DI-VISUAL-STUDIO.md" />
+    <Content Include="MULAI-DI-SINI.txt" />
+    <Content Include="index.html" />
+    <Content Include="start.bat" />
+    <Content Include="start.sh" />
+    <Content Include=".env.example" />
+    <Content Include="docs\bank-soal.pdf" />
+    <Content Include="lib\accounts.js" />
+    <Content Include="lib\config.js" />
+    <Content Include="scripts\setup-accounts.js" />
+    <Content Include="scripts\backup.js" />
+    <Content Include="scripts\check-production.js" />
+    <Content Include="tests\accounts.test.js" />
+    <Content Include="BUKA-DI-WEBSTORM.md" />
+    <Content Include="PRODUKSI.md" />
+    <Content Include="Buka-WebStorm.bat" />
+    <Content Include=".run\Serviam HRD.run.xml" />
+    <Content Include="Dockerfile" />
+    <Content Include="compose.yaml" />
+    <Content Include="deploy\Caddyfile" />
+    <Content Include=".env.production.example" />
+  </ItemGroup>
+  <Import Project="$(VSToolsPath)\Node.js Tools\Microsoft.NodejsToolsV2.targets" />
+</Project>

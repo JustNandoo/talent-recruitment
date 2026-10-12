@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Serviam HRD - Web" type="NodeJSConfigurationType" path-to-js-file="$PROJECT_DIR$/server.js" working-dir="$PROJECT_DIR$">
+    <envs>
+      <env name="NODE_ENV" value="development" />
+      <env name="BOOTSTRAP_ACCOUNTS" value="true" />
+      <env name="APP_ORIGIN" value="" />
+      <env name="HOST" value="0.0.0.0" />
+      <env name="PORT" value="3000" />
+      <env name="COOKIE_SECURE" value="false" />
+      <env name="TRUST_PROXY" value="false" />
+      <env name="TALENTA_OPEN_BROWSER" value="true" />
+    </envs>
+    <method v="2" />
+  </configuration>
+</component>

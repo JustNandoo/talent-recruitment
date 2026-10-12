@@ -1,0 +1,29 @@
+HRD DIVISION PT SERVIAM GROUP SHIPYARD - VERSI 1.2
+
+1. Instal Node.js 24+. Ekstrak ZIP ke folder proyek.
+2. WebStorm: klik Buka-WebStorm.bat atau File - Open folder proyek.
+   Pilih profil Serviam HRD - Web lalu Run / Shift+F10.
+   Alternatif: klik start.bat (Windows) atau sh start.sh (Linux/macOS).
+3. Browser dibuka setelah server siap. Gunakan alamat dari konsol.
+4. Instalasi lokal baru membuat akun:
+   superadmin@serviam.local dan admin@serviam.local.
+   Buka .data/initial-accounts.txt secara pribadi untuk kata sandi acak.
+   Kata sandi awal wajib diganti saat masuk.
+5. Add invitation - isi peserta - Buat undangan - Copy link.
+   Bagikan link sendiri; email peserta hanya identitas opsional.
+6. Periksa hasil/analisis peserta melalui dashboard.
+
+48 soal, 65 menit, urutan soal per peserta, satu kesempatan ujian.
+Sesi dapat dilanjutkan dari browser yang sama selama waktu tersedia.
+Superadmin mengelola akun dan audit; admin mengelola peserta/hasil.
+
+PENTING: localhost hanya dapat diakses pada laptop server itu sendiri.
+Untuk peserta internet gunakan domain dan hosting HTTPS: PRODUKSI.md.
+Saat memperbarui proyek lama, pertahankan folder .data.
+Akun lama tidak ditimpa. ZIP tidak berisi kata sandi atau database.
+
+Panduan WebStorm: BUKA-DI-WEBSTORM.md
+Panduan Visual Studio / VS Code: BUKA-DI-VISUAL-STUDIO.md
+Backup konsisten: npm run backup
+Pengujian: npm test (30 pengujian)
+Operasi produksi: PRODUKSI.md

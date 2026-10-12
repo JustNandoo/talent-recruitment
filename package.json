@@ -1,0 +1,19 @@
+{
+  "name": "talenta-recruitment",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Ujian rekrutmen HRD Division PT Serviam Group Shipyard dengan akses sekali pakai, urutan soal per peserta, dan analisis penguji.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/*.test.js",
+    "admin:setup": "node scripts/setup-admin.js",
+    "setup:accounts": "node scripts/setup-accounts.js",
+    "backup": "node scripts/backup.js",
+    "check:production": "node scripts/check-production.js"
+  }
+}

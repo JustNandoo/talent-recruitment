@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#092c45" />
+    <meta name="description" content="Ujian rekrutmen HRD Division PT Serviam Group Shipyard. Satu kesempatan, urutan soal per peserta, dan analisis hasil untuk penguji." />
+    <title>HRD Division PT Serviam Group Shipyard · Ujian Rekrutmen</title>
+    <script id="launch-guard">
+      if (window.location.protocol === 'file:') {
+        window.location.replace('http://localhost:3000/');
+      } else {
+        window.setTimeout(() => {
+          const loading = document.querySelector('.boot');
+          if (loading) loading.textContent = 'Halaman belum termuat. Pastikan server npm start tetap berjalan, lalu buka alamat web yang tercetak di terminal dan muat ulang halaman.';
+        }, 12000);
+      }
+    </script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body><noscript>Aktifkan JavaScript di browser untuk menggunakan aplikasi ujian HRD.</noscript><div id="app"><div class="boot">Menyiapkan asesmen HRD…</div></div><div id="toast" role="status" aria-live="polite"></div><div id="modal-root"></div></body>
+</html>
