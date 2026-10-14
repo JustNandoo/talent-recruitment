@@ -196,6 +196,23 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     const result=await admin.call(`/api/admin/exams/${invited.data.exam.id}`);assert.equal(result.status,200);assert.equal(result.data.exam.result.total,66);assert.equal(result.data.exam.answered,82);assert.equal(result.data.exam.result.analysis.m2.validity.sv,15);
     assert.equal((await admin.call(`/api/admin/exams/${invited.data.exam.id}`,'PATCH',{note:'Bukti wawancara',decision:'ditahan',interview:{}})).status,200);
   });
+  await t.test('ujian custom dan sumber tersimpan lintas instance dengan snapshot kunci', async () => {
+    const body={name:'Ujian Custom Postgres',company:'Perusahaan Tes',roles:['Staf'],sections:[{name:'Pengetahuan',minutes:5,questions:[{kind:'choice',prompt:'Jawaban yang benar?',options:['Salah','Benar'],key:'B',points:2}]}],sources:[{name:'sumber.txt',data:Buffer.from('Referensi private test.').toString('base64')}]};
+    const made=await admin.call('/api/admin/templates','POST',body);assert.equal(made.status,201);const type=made.data.exam.id;
+    assert.equal((await pool.query('SELECT version FROM serviam.schema_versions WHERE version=3')).rows.length,1);
+    assert.equal((await client(1,admin.cookie).call('/api/admin/meta')).data.exams.some(e=>e.id===type),true);
+    const invited=await admin.call('/api/admin/exams','POST',{name:'Peserta custom',examType:type,role:'role-1'});assert.equal(invited.status,201);
+    const stored=(await pool.query('SELECT definition FROM serviam.exam_templates WHERE id=$1',[type])).rows[0];
+    const edited=JSON.parse(stored.definition);edited.questions[0].answer='A';await pool.query('UPDATE serviam.exam_templates SET definition=$1 WHERE id=$2',[JSON.stringify(edited),type]);
+    const p=client(1);const started=await p.call('/api/exam/start','POST',{token:invited.data.invitationPath.split('/').at(-1),consent:true});assert.equal(started.status,201);assert.equal(started.data.exam.custom,true);
+    assert.equal('answer' in started.data.questions[0],false);
+    assert.equal((await p.call('/api/exam/answers','PATCH',{section:'S1',answers:{'S1-Q1':'B'}})).status,200);
+    await p.call('/api/exam/next','POST',{section:'S1'});
+    const result=await admin.call(`/api/admin/exams/${invited.data.exam.id}`);assert.equal(result.data.exam.result.total,2);
+    assert.equal((await client().call(`/api/admin/templates/${type}/sources/source-1`)).status,401);
+    assert.equal((await admin.call(`/api/admin/templates/${type}/sources/source-1`)).data,'Referensi private test.');
+    for(const role of ['anon','authenticated'])assert.equal((await pool.query("SELECT has_table_privilege($1,'serviam.exam_templates','SELECT') AS allowed",[role])).rows[0].allowed,false);
+  });
   await t.test('schema privat dan RLS menolak akses anon/authenticated; audit tidak mengandung sandi', async () => {
     for (const role of ['anon','authenticated']) assert.equal((await pool.query("SELECT has_schema_privilege($1,'serviam','USAGE') AS allowed",[role])).rows[0].allowed,false);
     const tables=(await pool.query("SELECT relname,relrowsecurity FROM pg_class JOIN pg_namespace ON pg_namespace.oid=relnamespace WHERE nspname='serviam' AND relname IN('users','exams','sessions','audit','rate_limits')")).rows;

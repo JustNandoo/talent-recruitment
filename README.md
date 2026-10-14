@@ -146,8 +146,18 @@ Hasil build Vercel versi 1.3 telah dijalankan melalui HTTPS dengan PostgreSQL TL
 
 ## Ujian Indo Artha Group
 
-Menu **Ujian → Ujian baru** memilih bank Serviam atau Indo Artha Group sebelum membuat undangan. Paket lengkap Indo Artha berisi 82 butir: Model 1 Kognitif 40 menit, Model 3 Situasional 25 menit, jeda wajib 10 menit, lalu Model 2 Gaya Kerja 15 menit. Paket ringkas untuk operator/staf produksi memakai 57 butir selama 40 menit. Posisi, soal acak, waktu, stimulus bacaan/tabel, skoring dan analisis mengikuti delapan DOCX hasil ekstraksi `Soal_Baru.zip` di `docs/indo-artha`. Dokumen sumber dan kunci hanya dapat diunduh penguji terautentikasi dari kartu ujian.
+Menu **Ujian → Buat undangan** memilih bank Serviam atau Indo Artha Group sebelum membuat undangan. Paket lengkap Indo Artha berisi 82 butir: Model 1 Kognitif 40 menit, Model 3 Situasional 25 menit, jeda wajib 10 menit, lalu Model 2 Gaya Kerja 15 menit. Paket ringkas untuk operator/staf produksi memakai 57 butir selama 40 menit. Posisi, soal acak, waktu, stimulus bacaan/tabel, skoring dan analisis mengikuti delapan DOCX hasil ekstraksi `Soal_Baru.zip` di `docs/indo-artha`. Dokumen sumber dan kunci hanya dapat diunduh penguji terautentikasi dari kartu ujian.
 
 Hasil Indo Artha menampilkan profil subtes kognitif, tujuh dimensi gaya kerja, validitas, kompetensi situasional, indikator klarifikasi, serta pertanyaan wawancara dari sumber. Rekomendasi awal terpisah dari keputusan manual penguji. Katalog, formulir undangan, daftar peserta, rincian hasil dan CSV mencantumkan jenis paket.
 
 Migrasi SQLite dan PostgreSQL versi 2 menambah kolom `exam_type` dengan nilai awal `serviam` untuk undangan lama, tanpa mengubah jawaban, hasil, akun atau sesi. Soal lama tetap memakai skoring asli. PostgreSQL memigrasikan kolom sekali di bawah lock schema.
+
+## Ujian buatan penguji
+
+Buka **Ujian → Tambah ujian**, isi nama ujian, perusahaan, daftar posisi, instruksi dan waktu setiap bagian. Tambahkan soal pilihan ganda (2–5 opsi), pilihan berbobot, jawaban singkat dengan alternatif jawaban benar, atau kuesioner skala 1–5. Kunci, bobot dan pembahasan hanya tersedia bagi penguji. Skala kuesioner dilaporkan terpisah, tanpa diagnosis atau rekomendasi seleksi otomatis.
+
+Soal dapat ditulis langsung atau diimpor per bagian dari JSON, CSV atau TXT. JSON menerima array soal atau objek `{ "questions": [...] }`; contoh pilihan: `{ "prompt": "2 + 2 = ?", "options": ["3", "4"], "key": "B", "points": 1 }`. CSV menggunakan header `soal,A,B,C,D,E,kunci,pembahasan`; opsi C–E boleh kosong. TXT menggunakan soal bernomor, opsi `A. ...`, `B. ...`, lalu `Kunci: B`. Impor wajib menyertakan kunci pilihan; pembuat dapat memeriksa dan mengubah soal sebelum menyimpan.
+
+Unggah sumber PDF, DOCX, ZIP, TXT, MD, CSV atau JSON sebagai referensi privat. PDF/DOCX/ZIP tidak otomatis diubah menjadi soal. Maksimum 1 MiB per berkas, 2 MiB total, dan 10 sumber per ujian. Maksimum 10 bagian/300 soal/180 menit per ujian. Berkas sumber tersimpan di database privat Supabase dan hanya dapat diunduh setelah penguji login, bukan dari direktori publik Vercel.
+
+Klik **Simpan ujian**, lalu **Buat undangan** pada kartu ujian yang baru. Paket Serviam dan Indo Artha tetap terpisah. Setiap undangan menyimpan salinan definisi, kunci dan bobot sehingga perubahan bank tidak mengubah ujian yang sudah diundang. Versi ini mendukung pembuatan ujian baru; buat paket baru untuk revisi bank. Data akun, undangan, jawaban dan hasil lama dipertahankan oleh migrasi versi 3 (`db/custom-exams.sql`).

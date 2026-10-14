@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { openStore, hash, token, verifyPassword, passwordHash } from './lib/store.js';
 import { SECTIONS, ROLES, SOURCE, INTERVIEWS, QUESTIONS } from './lib/bank.js';
 import { createQuestionOrder, orderedPublicQuestions } from './lib/order.js';
+import { createCustomDefinition, customDefinitionSummary } from './lib/custom-exams.js';
 import { examDefinition, definitionFor, publicDefinitions, questionsFor, validateExamAnswer, examMetadata } from './lib/exams.js';
 import { openBrowser } from './lib/browser.js';
 import { loadEnvironment, readConfig } from './lib/config.js';
@@ -24,12 +25,12 @@ function cookie(req, name) {
   const value = (req.headers.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith(`${name}=`));
   return value?.slice(name.length + 1) || null;
 }
-async function readBody(req) {
+async function readBody(req, maxBytes = 65_536) {
   assert((req.headers['content-type'] || '').split(';')[0] === 'application/json', 415, 'Gunakan format JSON.');
   // Vercel's Node runtime may have already consumed and parsed the request stream.
   if (req.body !== undefined) {
     const raw = Buffer.isBuffer(req.body) ? req.body.toString() : typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-    assert(Buffer.byteLength(raw) <= 65_536, 413, 'Data terlalu besar.');
+    assert(Buffer.byteLength(raw) <= maxBytes, 413, 'Data terlalu besar.');
     try { const data = JSON.parse(raw); assert(data && typeof data === 'object' && !Array.isArray(data), 400, 'Data tidak valid.'); return data; }
     catch (error) { if (error instanceof ApiError) throw error; throw new ApiError(400, 'Format data tidak valid.'); }
   }
@@ -37,7 +38,7 @@ async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) {
     bytes += chunk.length;
-    assert(bytes <= 65_536, 413, 'Data terlalu besar.');
+    assert(bytes <= maxBytes, 413, 'Data terlalu besar.');
     chunks.push(chunk);
   }
   try { const data = JSON.parse(Buffer.concat(chunks).toString()); assert(data && typeof data === 'object' && !Array.isArray(data), 400, 'Data tidak valid.'); return data; }
@@ -98,7 +99,18 @@ export function createApp(options = {}) {
     assert(exam, 404, 'Ujian tidak ditemukan.');
     return exam;
   }
-  function examPayload(exam) { const definition=definitionFor(exam); return { exam: store.publicExam(exam), sections: examMetadata(exam).sections, questions: exam.status === 'active' ? orderedPublicQuestions(definition.sections[exam.section_index].id, JSON.parse(exam.question_order), definition.id) : [] }; }
+  function examPayload(exam) { const definition=definitionFor(exam); return { exam: store.publicExam(exam), sections: examMetadata(exam).sections, questions: exam.status === 'active' ? orderedPublicQuestions(definition.sections[exam.section_index].id, JSON.parse(exam.question_order), definition) : [] }; }
+  async function resolveDefinition(type) {
+    if (typeof type !== 'string') return null;
+    const builtin=examDefinition(type);
+    if(builtin) return builtin;
+    const row=await db.prepare('SELECT definition FROM exam_templates WHERE id=?').get(type);
+    return row ? JSON.parse(row.definition) : null;
+  }
+  async function listDefinitions() {
+    const rows=await db.prepare('SELECT definition FROM exam_templates ORDER BY created_at DESC').all();
+    return [...publicDefinitions(), ...rows.map(row=>customDefinitionSummary(JSON.parse(row.definition)))];
+  }
   async function listExams() {
     const rows = await db.prepare('SELECT * FROM exams ORDER BY created_at DESC, rowid DESC').all();
     const exams = [];
@@ -210,19 +222,37 @@ export function createApp(options = {}) {
           await superadmin(req);
           return send(200, { mode: config.production ? 'production' : 'development', publicOrigin: origin, secureCookies: secure, database: (await db.prepare('SELECT 1 AS ok').get()).ok === 1, databaseEngine: store.kind || 'sqlite', invitations: 'link', nodeVersion: process.versions.node });
         }
-        if (path === '/api/admin/meta' && method === 'GET') { await admin(req); return send(200, { roles: ROLES, sections: SECTIONS, source: SOURCE, interviews: INTERVIEWS, exams: publicDefinitions() }); }
+        if (path === '/api/admin/meta' && method === 'GET') { await admin(req); return send(200, { roles: ROLES, sections: SECTIONS, source: SOURCE, interviews: INTERVIEWS, exams: await listDefinitions() }); }
+        if (path === '/api/admin/templates' && method === 'POST') {
+          const user=await admin(req);
+          await rateLimit(req,'create-template',30);
+          const input=await readBody(req,4*1024*1024),id=`custom-${token()}`;
+          const {definition,sources}=createCustomDefinition(input,id);
+          await db.prepare('INSERT INTO exam_templates(id,definition,sources,created_by,created_at) VALUES(?,?,?,?,?)').run(id,JSON.stringify(definition),JSON.stringify(sources),user.id,clock());
+          await store.audit(user.id,'exam_template_created',id);
+          return send(201,{exam:customDefinitionSummary(definition)});
+        }
+        const sourceMatch=path.match(/^\/api\/admin\/templates\/(custom-[A-Za-z0-9_-]+)\/sources\/(source-\d+)$/);
+        if(sourceMatch && method==='GET') {
+          await admin(req);
+          const row=await db.prepare('SELECT sources FROM exam_templates WHERE id=?').get(sourceMatch[1]);
+          const source=row && JSON.parse(row.sources).find(s=>s.id===sourceMatch[2]);
+          assert(source,404,'Dokumen sumber tidak ditemukan.');
+          res.writeHead(200,{'Content-Type':source.type,'Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(source.name)}`});
+          return res.end(Buffer.from(source.data,'base64'));
+        }
         if (path === '/api/admin/exams' && method === 'GET') { await admin(req); return send(200, { exams: await listExams() }); }
         if (path === '/api/admin/exams' && method === 'POST') {
           const user = await admin(req);
           const body = await readBody(req);
-          const definition = examDefinition(body.examType ?? 'serviam');
+          const definition = await resolveDefinition(body.examType ?? 'serviam');
           assert(definition, 400, 'Pilih jenis ujian yang tersedia.');
           assert(textValid(body.name, 2, 80) && (!body.email || emailValid(body.email)) && definition.roles.some(r => r.id === body.role), 400, 'Nama, email, atau posisi tidak valid.');
           const rawToken = token();
           const id = token();
           const expiryDays = Number(body.expiryDays ?? 7);
           assert(Number.isInteger(expiryDays) && expiryDays >= 1 && expiryDays <= 30, 400, 'Masa berlaku harus 1–30 hari.');
-          (await db.prepare('INSERT INTO exams(id,name,email,role,token_hash,created_at,expires_at,created_by,question_order,exam_type) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id, body.name.trim(), (body.email || '').trim().toLowerCase(), body.role, hash(rawToken), clock(), clock() + expiryDays * 86400_000, user.id, JSON.stringify(createQuestionOrder(definition.id)), definition.id));
+          (await db.prepare('INSERT INTO exams(id,name,email,role,token_hash,created_at,expires_at,created_by,question_order,exam_type,exam_definition) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id, body.name.trim(), (body.email || '').trim().toLowerCase(), body.role, hash(rawToken), clock(), clock() + expiryDays * 86400_000, user.id, JSON.stringify(createQuestionOrder(definition)), definition.id, definition.custom ? JSON.stringify(definition) : null));
           (await store.audit(user.id, 'invitation_created', id));
           return send(201, { exam: store.adminExam((await store.getExam(id))), invitationPath: `/ujian/${rawToken}`, ...(origin ? { publicOrigin: origin } : {}) });
         }
@@ -257,7 +287,7 @@ export function createApp(options = {}) {
           if (method === 'POST' && adminMatch[2]) {
             assert(exam.status === 'pending', 409, 'Tautan peserta yang sudah mulai tidak dapat dibuat ulang.');
             const rawToken = token();
-            (await db.prepare('UPDATE exams SET token_hash=?, expires_at=?, question_order=? WHERE id=?').run(hash(rawToken), clock() + 7 * 86400_000, JSON.stringify(createQuestionOrder(exam.exam_type)), exam.id));
+            (await db.prepare('UPDATE exams SET token_hash=?, expires_at=?, question_order=? WHERE id=?').run(hash(rawToken), clock() + 7 * 86400_000, JSON.stringify(createQuestionOrder(definitionFor(exam))), exam.id));
             (await store.audit(user.id, 'invitation_rotated', exam.id));
             return send(200, { invitationPath: `/ujian/${rawToken}`, ...(origin ? { publicOrigin: origin } : {}) });
           }
@@ -310,7 +340,8 @@ export function createApp(options = {}) {
           const now = clock();
           const changed = (await db.prepare("UPDATE exams SET status='active',started_at=?,section_deadline=?,consent_at=? WHERE id=? AND status='pending'").run(now, now + definitionFor(exam).sections[0].minutes * 60_000, now, exam.id));
           assert(changed.changes === 1, 410, 'Tautan sudah digunakan.');
-          setCookie(res, 'talenta_exam', (await store.createSession('exam', null, exam.id, 3 * 3600_000)), 3 * 3600);
+          const sessionSeconds=Math.max(180,definitionFor(exam).minutes+60)*60;
+          setCookie(res, 'talenta_exam', (await store.createSession('exam', null, exam.id, sessionSeconds*1000)), sessionSeconds);
           (await store.audit(`peserta:${exam.id}`, 'exam_started', exam.id));
           return send(201, examPayload((await store.getExam(exam.id))));
         }
@@ -324,7 +355,7 @@ export function createApp(options = {}) {
           assert(body.answers && typeof body.answers === 'object' && !Array.isArray(body.answers) && Object.keys(body.answers).length <= SECTIONS[exam.section_index].count, 400, 'Jawaban tidak valid.');
           const answers = JSON.parse(exam.answers);
           for (const [id, value] of Object.entries(body.answers)) {
-            const question = questionsFor(exam.exam_type, body.section).find(q => q.id === id);
+            const question = questionsFor(definitionFor(exam), body.section).find(q => q.id === id);
             assert(question && validateExamAnswer(question, value), 400, 'Pilihan jawaban tidak valid.');
             if (value === '' || value === null) delete answers[id]; else answers[id] = value;
           }
@@ -350,7 +381,7 @@ export function createApp(options = {}) {
         res.writeHead(302, { Location: '/' });
         return res.end();
       }
-      const assets = { '/app.js': 'app.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
+      const assets = { '/app.js': 'app.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/exam-builder.js':'exam-builder.js', '/custom-exam-ui.js':'custom-exam-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
       const asset = assets[path];
       const isPage = path === '/' || path === '/setup' || path === '/penguji' || /^\/penguji\/hasil\/[A-Za-z0-9_-]+$/.test(path) || /^\/ujian(?:\/[A-Za-z0-9_-]+)?$/.test(path);
       assert(asset || isPage, 404, 'Halaman tidak ditemukan.');
