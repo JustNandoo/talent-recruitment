@@ -65,3 +65,15 @@ test('custom tersimpan setelah restart; undangan memakai snapshot dan sumber dil
  assert.equal((await f.admin.call(`/api/admin/templates/${type}/sources/source-99`)).status,404);
  assert.match((await f.admin.call('/api/admin/export')).data,/Tes Administrasi Mandiri/);
 });
+
+test('API import Word hanya untuk penguji, CSRF terlindungi, hasil dapat langsung disimpan sebagai ujian',async t=>{
+ const f=await fixture(t),name='Soal Model 1 - Kognitif.docx',keyName='Kunci & Analisa Model 1 (rahasia).docx';
+ const sources=[name,keyName].map(name=>({name,data:readFileSync(new URL('../docs/indo-artha/'+name,import.meta.url)).toString('base64')}));
+ assert.equal((await f.client().call('/api/admin/import-documents','POST',{sources})).status,401);
+ assert.equal((await f.admin.call('/api/admin/import-documents','POST',{sources},{Origin:'https://asing.example'})).status,403);
+ const imported=await f.admin.call('/api/admin/import-documents','POST',{sources});assert.equal(imported.status,200);assert.equal(imported.data.count,30);assert.deepEqual(imported.data.warnings,[]);
+ const created=await f.admin.call('/api/admin/templates','POST',{name:'Impor Word otomatis',company:'Uji Word',roles:['Umum'],sections:imported.data.sections,sources});assert.equal(created.status,201);assert.equal(created.data.exam.count,30);
+ assert.equal((await f.admin.call('/api/admin/import-documents','POST',{sources:[]})).status,400);
+ assert.equal((await f.admin.call('/api/admin/import-documents','POST',{sources:[{name:'fake.docx',data:Buffer.from('PK invalid').toString('base64')}]})).status,400);
+ assert.equal((await f.client().call('/lib/document-import.js')).status,404);
+});

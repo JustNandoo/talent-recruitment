@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { openStore, hash, token, verifyPassword, passwordHash } from './lib/store.js';
 import { SECTIONS, ROLES, SOURCE, INTERVIEWS, QUESTIONS } from './lib/bank.js';
 import { createQuestionOrder, orderedPublicQuestions } from './lib/order.js';
-import { createCustomDefinition, customDefinitionSummary } from './lib/custom-exams.js';
+import { createCustomDefinition, customDefinitionSummary, validateSources } from './lib/custom-exams.js';
 import { examDefinition, definitionFor, publicDefinitions, questionsFor, validateExamAnswer, examMetadata } from './lib/exams.js';
 import { openBrowser } from './lib/browser.js';
 import { loadEnvironment, readConfig } from './lib/config.js';
@@ -223,6 +223,14 @@ export function createApp(options = {}) {
           return send(200, { mode: config.production ? 'production' : 'development', publicOrigin: origin, secureCookies: secure, database: (await db.prepare('SELECT 1 AS ok').get()).ok === 1, databaseEngine: store.kind || 'sqlite', invitations: 'link', nodeVersion: process.versions.node });
         }
         if (path === '/api/admin/meta' && method === 'GET') { await admin(req); return send(200, { roles: ROLES, sections: SECTIONS, source: SOURCE, interviews: INTERVIEWS, exams: await listDefinitions() }); }
+        if (path === '/api/admin/import-documents' && method === 'POST') {
+          await admin(req);
+          await rateLimit(req,'import-documents',20);
+          const body=await readBody(req,4*1024*1024),sources=validateSources(body.sources);
+          assert(sources.length>0,400,'Pilih dokumen soal dan kunci.');
+          const {importDocuments}=await import('./lib/document-import.js');
+          return send(200,await importDocuments(sources));
+        }
         if (path === '/api/admin/templates' && method === 'POST') {
           const user=await admin(req);
           await rateLimit(req,'create-template',30);
