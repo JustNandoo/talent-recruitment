@@ -143,3 +143,11 @@ Pemeriksaan versi 1.2 mencakup browser desktop/mobile, alur Add invitation dan c
 Versi 1.3 menambah 10 pengujian integrasi PostgreSQL, termasuk dua instance, start bersamaan, jawaban paralel, cold start, dan handler Vercel dengan request body yang telah diparse. Jalankan `npm run test:postgres` hanya dengan `TEST_DATABASE_URL` menuju PostgreSQL lokal khusus tes bernama `serviam_test`. CI menyiapkan service tersebut. `npm run vercel:check` memeriksa build tanpa membutuhkan rahasia database saat build. Koneksi Supabase dan deployment publik tetap harus diverifikasi setelah variabel pribadi dimasukkan di Vercel.
 
 Hasil build Vercel versi 1.3 telah dijalankan melalui HTTPS dengan PostgreSQL TLS dan diuji di Chromium untuk desktop/mobile, ganti password awal, 48 jawaban, skoring, resume serta cold start. Proyek Supabase/Vercel dalam akun operator belum dapat diverifikasi sebelum connection string pribadi dikonfigurasikan.
+
+## Ujian Indo Artha Group
+
+Menu **Ujian → Ujian baru** memilih bank Serviam atau Indo Artha Group sebelum membuat undangan. Paket lengkap Indo Artha berisi 82 butir: Model 1 Kognitif 40 menit, Model 3 Situasional 25 menit, jeda wajib 10 menit, lalu Model 2 Gaya Kerja 15 menit. Paket ringkas untuk operator/staf produksi memakai 57 butir selama 40 menit. Posisi, soal acak, waktu, stimulus bacaan/tabel, skoring dan analisis mengikuti delapan DOCX hasil ekstraksi `Soal_Baru.zip` di `docs/indo-artha`. Dokumen sumber dan kunci hanya dapat diunduh penguji terautentikasi dari kartu ujian.
+
+Hasil Indo Artha menampilkan profil subtes kognitif, tujuh dimensi gaya kerja, validitas, kompetensi situasional, indikator klarifikasi, serta pertanyaan wawancara dari sumber. Rekomendasi awal terpisah dari keputusan manual penguji. Katalog, formulir undangan, daftar peserta, rincian hasil dan CSV mencantumkan jenis paket.
+
+Migrasi SQLite dan PostgreSQL versi 2 menambah kolom `exam_type` dengan nilai awal `serviam` untuk undangan lama, tanpa mengubah jawaban, hasil, akun atau sesi. Soal lama tetap memakai skoring asli. PostgreSQL memigrasikan kolom sekali di bawah lock schema.

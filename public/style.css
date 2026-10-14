@@ -39,3 +39,23 @@
 @media(max-width:767px){.exam-topbar{height:auto;min-height:85px;padding-top:12px;padding-bottom:12px;flex-wrap:wrap;row-gap:10px}.exam-topbar .brand{flex:1;min-width:180px}.exam-topbar .brand-logo{width:40px;height:46px}.exam-topbar .brand-copy strong{font-size:14px}.exam-topbar .brand-copy>span{font-size:10px;max-width:190px}.exam-person{margin-left:auto}.exam-secure{display:none}.auth-mobile-brand .brand-logo{width:46px;height:50px}.auth-mobile-brand .brand-copy strong{font-size:16px}.main-footer{font-size:10px}}
 
 .password-page{max-width:520px;margin:40px auto;padding:28px;background:#fff;border:1px solid var(--border);border-radius:12px}.password-page>.brand{margin-bottom:32px}.password-info{font-size:12px;margin:18px 0}.password-page>.text-button{margin-top:22px}.system-info{padding:24px;margin-bottom:24px}.system-info dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:0}.system-info dt{font-size:11px;color:var(--muted)}.system-info dd{font-size:13px;margin:5px 0 0;overflow-wrap:anywhere}.sidebar{overflow-y:auto}.copy-field .button{flex-shrink:0}.copy-field input{min-width:0}@media(max-width:600px){.password-page{margin:16px;padding:22px}.system-info dl{grid-template-columns:1fr}.copy-field{flex-wrap:wrap}.copy-field input{flex:1 1 100%}}
+
+.exam-catalog { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr)); gap:24px; }
+.exam-catalog-card { padding:28px; }
+.exam-catalog-card h2 { font-size:24px; margin:12px 0; }
+.catalog-sections { margin:24px 0; }
+.catalog-sections > div { display:flex; gap:12px; justify-content:space-between; border-bottom:1px solid var(--border,#e6e8e0); padding:12px 0; }
+.catalog-sections span { white-space:nowrap; font-size:12px; }
+.catalog-documents { margin-top:22px; }
+.catalog-documents summary { cursor:pointer; font-weight:600; }
+.catalog-documents a { display:block; margin:12px 0; font-size:13px; }
+.question-stimulus { padding:20px; border:1px solid #d9dfd3; border-radius:12px; margin-bottom:24px; line-height:1.65; }
+.question-stimulus h3,.question-stimulus h4 { margin:0 0 12px; }
+.question-stimulus .guide-table { min-width:520px; font-size:13px; }
+.question-stimulus p { white-space:pre-line; }
+.indo-logo { width:70px; height:46px; object-fit:contain; }
+.indo-summary,.indo-panel-content { padding:26px; line-height:1.7; }
+.indo-summary ul,.indo-panel-content ul { padding-left:22px; }
+.indo-summary h2 { margin:12px 0; }
+.indo-summary + .detail-tabs { margin-top:24px; }
+.badge.red { color:#9e2b2b; background:#fff0ef; }

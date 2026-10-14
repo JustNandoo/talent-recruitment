@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { openStore, hash, token, verifyPassword, passwordHash } from './lib/store.js';
 import { SECTIONS, ROLES, SOURCE, INTERVIEWS, QUESTIONS } from './lib/bank.js';
 import { createQuestionOrder, orderedPublicQuestions } from './lib/order.js';
-import { validateAnswer } from './lib/scoring.js';
+import { examDefinition, definitionFor, publicDefinitions, questionsFor, validateExamAnswer, examMetadata } from './lib/exams.js';
 import { openBrowser } from './lib/browser.js';
 import { loadEnvironment, readConfig } from './lib/config.js';
 import { prepareAccounts } from './lib/accounts.js';
@@ -16,7 +16,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 const emailValid = email => typeof email === 'string' && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const textValid = (value, min, max) => typeof value === 'string' && value.trim().length >= min && value.length <= max;
 const decisions = ['belum_diputuskan', 'lanjut', 'ditahan', 'tidak_lanjut'];
-const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png':'image/png' };
 class ApiError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const assert = (ok, status, message) => { if (!ok) throw new ApiError(status, message); };
 
@@ -98,7 +98,7 @@ export function createApp(options = {}) {
     assert(exam, 404, 'Ujian tidak ditemukan.');
     return exam;
   }
-  function examPayload(exam) { return { exam: store.publicExam(exam), sections: SECTIONS, questions: exam.status === 'active' ? orderedPublicQuestions(SECTIONS[exam.section_index].id, JSON.parse(exam.question_order)) : [] }; }
+  function examPayload(exam) { const definition=definitionFor(exam); return { exam: store.publicExam(exam), sections: examMetadata(exam).sections, questions: exam.status === 'active' ? orderedPublicQuestions(definition.sections[exam.section_index].id, JSON.parse(exam.question_order), definition.id) : [] }; }
   async function listExams() {
     const rows = await db.prepare('SELECT * FROM exams ORDER BY created_at DESC, rowid DESC').all();
     const exams = [];
@@ -210,29 +210,39 @@ export function createApp(options = {}) {
           await superadmin(req);
           return send(200, { mode: config.production ? 'production' : 'development', publicOrigin: origin, secureCookies: secure, database: (await db.prepare('SELECT 1 AS ok').get()).ok === 1, databaseEngine: store.kind || 'sqlite', invitations: 'link', nodeVersion: process.versions.node });
         }
-        if (path === '/api/admin/meta' && method === 'GET') { await admin(req); return send(200, { roles: ROLES, sections: SECTIONS, source: SOURCE, interviews: INTERVIEWS }); }
+        if (path === '/api/admin/meta' && method === 'GET') { await admin(req); return send(200, { roles: ROLES, sections: SECTIONS, source: SOURCE, interviews: INTERVIEWS, exams: publicDefinitions() }); }
         if (path === '/api/admin/exams' && method === 'GET') { await admin(req); return send(200, { exams: await listExams() }); }
         if (path === '/api/admin/exams' && method === 'POST') {
           const user = await admin(req);
           const body = await readBody(req);
-          assert(textValid(body.name, 2, 80) && (!body.email || emailValid(body.email)) && ROLES.some(r => r.id === body.role), 400, 'Nama, email, atau posisi tidak valid.');
+          const definition = examDefinition(body.examType ?? 'serviam');
+          assert(definition, 400, 'Pilih jenis ujian yang tersedia.');
+          assert(textValid(body.name, 2, 80) && (!body.email || emailValid(body.email)) && definition.roles.some(r => r.id === body.role), 400, 'Nama, email, atau posisi tidak valid.');
           const rawToken = token();
           const id = token();
           const expiryDays = Number(body.expiryDays ?? 7);
           assert(Number.isInteger(expiryDays) && expiryDays >= 1 && expiryDays <= 30, 400, 'Masa berlaku harus 1–30 hari.');
-          (await db.prepare('INSERT INTO exams(id,name,email,role,token_hash,created_at,expires_at,created_by,question_order) VALUES(?,?,?,?,?,?,?,?,?)').run(id, body.name.trim(), (body.email || '').trim().toLowerCase(), body.role, hash(rawToken), clock(), clock() + expiryDays * 86400_000, user.id, JSON.stringify(createQuestionOrder())));
+          (await db.prepare('INSERT INTO exams(id,name,email,role,token_hash,created_at,expires_at,created_by,question_order,exam_type) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id, body.name.trim(), (body.email || '').trim().toLowerCase(), body.role, hash(rawToken), clock(), clock() + expiryDays * 86400_000, user.id, JSON.stringify(createQuestionOrder(definition.id)), definition.id));
           (await store.audit(user.id, 'invitation_created', id));
           return send(201, { exam: store.adminExam((await store.getExam(id))), invitationPath: `/ujian/${rawToken}`, ...(origin ? { publicOrigin: origin } : {}) });
         }
         if (path === '/api/admin/export' && method === 'GET') {
           await admin(req);
-          const rows = [['Nama', 'Email', 'Posisi', 'Status', 'Skor A-D / 46', 'Persentase A-D', 'Tinjauan', 'Rata-rata wawancara', 'Keputusan penguji', 'Selesai pada']];
-          (await listExams()).forEach(e => rows.push([e.name, e.email, ROLES.find(r => r.id === e.role)?.name, e.status, e.total, e.percent, e.review?.label, e.interviewSummary.average, e.decision, e.finishedAt ? new Date(e.finishedAt).toISOString() : '']));
+          const rows = [['Nama', 'Email', 'Posisi', 'Status', 'Jenis ujian', 'Skor tes', 'Skor maksimum', 'Persentase tes', 'Tinjauan', 'Rata-rata wawancara', 'Keputusan penguji', 'Selesai pada']];
+          (await listExams()).forEach(e => rows.push([e.name, e.email, e.roleName, e.status, e.examLabel, e.total, e.max, e.percent, e.review?.label, e.interviewSummary.average, e.decision, e.finishedAt ? new Date(e.finishedAt).toISOString() : '']));
           res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="hasil-rekrutmen.csv"' });
           return res.end('\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n'));
         }
         if (path === '/api/admin/source' && method === 'GET') {
           await admin(req);
+          const definition = examDefinition(url.searchParams.get('examType') || 'serviam');
+          assert(definition, 404, 'Dokumen sumber tidak ditemukan.');
+          if (definition.id !== 'serviam') {
+            const document = url.searchParams.get('document') || 'Panduan Penguji.docx';
+            assert(definition.documents.includes(document), 404, 'Dokumen sumber tidak ditemukan.');
+            res.writeHead(200, {'Content-Type':'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(document)}`});
+            return res.end(readFileSync(join(root,'docs','indo-artha',document)));
+          }
           const pdf = join(root, 'docs', 'bank-soal.pdf');
           assert(existsSync(pdf), 404, 'Dokumen sumber belum tersedia.');
           res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="Bank-Soal-Psikotes.pdf"' });
@@ -247,7 +257,7 @@ export function createApp(options = {}) {
           if (method === 'POST' && adminMatch[2]) {
             assert(exam.status === 'pending', 409, 'Tautan peserta yang sudah mulai tidak dapat dibuat ulang.');
             const rawToken = token();
-            (await db.prepare('UPDATE exams SET token_hash=?, expires_at=?, question_order=? WHERE id=?').run(hash(rawToken), clock() + 7 * 86400_000, JSON.stringify(createQuestionOrder()), exam.id));
+            (await db.prepare('UPDATE exams SET token_hash=?, expires_at=?, question_order=? WHERE id=?').run(hash(rawToken), clock() + 7 * 86400_000, JSON.stringify(createQuestionOrder(exam.exam_type)), exam.id));
             (await store.audit(user.id, 'invitation_rotated', exam.id));
             return send(200, { invitationPath: `/ujian/${rawToken}`, ...(origin ? { publicOrigin: origin } : {}) });
           }
@@ -285,7 +295,7 @@ export function createApp(options = {}) {
             return send(200, { ...examPayload(exam), resume: true });
           }
           assert(clock() < exam.expires_at, 410, 'Masa berlaku tautan sudah habis. Hubungi penguji.');
-          return send(200, { invitation: { name: exam.name, role: ROLES.find(r => r.id === exam.role)?.name, expiresAt: exam.expires_at }, sections: SECTIONS });
+          return send(200, { invitation: { ...examMetadata(exam), name: exam.name, role: examMetadata(exam).roleName, expiresAt: exam.expires_at }, sections: examMetadata(exam).sections });
         }
         if (path === '/api/exam/start' && method === 'POST') {
           await rateLimit(req, 'start', 60);
@@ -298,7 +308,7 @@ export function createApp(options = {}) {
           const old = (await store.getSession(cookie(req, 'talenta_exam'), 'exam'));
           if (old) assert((await store.refreshExam((await store.getExam(old.exam_id))))?.status !== 'active', 409, 'Selesaikan ujian yang sedang aktif di browser ini terlebih dahulu.');
           const now = clock();
-          const changed = (await db.prepare("UPDATE exams SET status='active',started_at=?,section_deadline=?,consent_at=? WHERE id=? AND status='pending'").run(now, now + SECTIONS[0].minutes * 60_000, now, exam.id));
+          const changed = (await db.prepare("UPDATE exams SET status='active',started_at=?,section_deadline=?,consent_at=? WHERE id=? AND status='pending'").run(now, now + definitionFor(exam).sections[0].minutes * 60_000, now, exam.id));
           assert(changed.changes === 1, 410, 'Tautan sudah digunakan.');
           setCookie(res, 'talenta_exam', (await store.createSession('exam', null, exam.id, 3 * 3600_000)), 3 * 3600);
           (await store.audit(`peserta:${exam.id}`, 'exam_started', exam.id));
@@ -309,12 +319,13 @@ export function createApp(options = {}) {
           const body = await readBody(req);
           const exam = await examSession(req);
           assert(exam.status === 'active', 410, 'Ujian sudah selesai; jawaban tidak dapat diubah.');
+          const SECTIONS = definitionFor(exam).sections;
           assert(body.section === SECTIONS[exam.section_index].id, 409, 'Waktu bagian ini sudah berakhir. Jawaban terakhir yang tersimpan digunakan.');
-          assert(body.answers && typeof body.answers === 'object' && !Array.isArray(body.answers) && Object.keys(body.answers).length <= 14, 400, 'Jawaban tidak valid.');
+          assert(body.answers && typeof body.answers === 'object' && !Array.isArray(body.answers) && Object.keys(body.answers).length <= SECTIONS[exam.section_index].count, 400, 'Jawaban tidak valid.');
           const answers = JSON.parse(exam.answers);
           for (const [id, value] of Object.entries(body.answers)) {
-            const question = QUESTIONS.find(q => q.id === id && q.section === body.section);
-            assert(question && validateAnswer(question, value), 400, 'Pilihan jawaban tidak valid.');
+            const question = questionsFor(exam.exam_type, body.section).find(q => q.id === id);
+            assert(question && validateExamAnswer(question, value), 400, 'Pilihan jawaban tidak valid.');
             if (value === '' || value === null) delete answers[id]; else answers[id] = value;
           }
           (await db.prepare('UPDATE exams SET answers=? WHERE id=?').run(JSON.stringify(answers), exam.id));
@@ -324,7 +335,9 @@ export function createApp(options = {}) {
           const body = await readBody(req);
           const exam = await examSession(req);
           assert(exam.status === 'active', 410, 'Ujian sudah selesai.');
+          const SECTIONS = definitionFor(exam).sections;
           assert(body.section === SECTIONS[exam.section_index].id, 409, 'Bagian ujian sudah berganti.');
+          assert(!SECTIONS[exam.section_index].break || clock() >= exam.section_deadline, 409, 'Jeda belum selesai. Tunggu sampai bagian berikutnya terbuka.');
           if (exam.section_index === SECTIONS.length - 1) return send(200, examPayload((await store.completeExam(exam))));
           const nextIndex = exam.section_index + 1;
           (await db.prepare('UPDATE exams SET section_index=?,section_deadline=? WHERE id=?').run(nextIndex, clock() + SECTIONS[nextIndex].minutes * 60_000, exam.id));
@@ -337,7 +350,7 @@ export function createApp(options = {}) {
         res.writeHead(302, { Location: '/' });
         return res.end();
       }
-      const assets = { '/app.js': 'app.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg' };
+      const assets = { '/app.js': 'app.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
       const asset = assets[path];
       const isPage = path === '/' || path === '/setup' || path === '/penguji' || /^\/penguji\/hasil\/[A-Za-z0-9_-]+$/.test(path) || /^\/ujian(?:\/[A-Za-z0-9_-]+)?$/.test(path);
       assert(asset || isPage, 404, 'Halaman tidak ditemukan.');

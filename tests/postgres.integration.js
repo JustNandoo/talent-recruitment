@@ -161,6 +161,41 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     assert.deepEqual(changed.map(response=>response.status).sort(),[200,409]);
     assert.equal((await pool.query("SELECT count(*) FROM serviam.users WHERE role='superadmin' AND is_active=1")).rows[0].count,1);
   });
+  await t.test('upgrade database versi 1 menambah jenis Serviam tanpa mengubah hasil dan akun', async () => {
+    const original=(await pool.query('SELECT * FROM serviam.exams WHERE id=$1',[invitation.exam.id])).rows[0];
+    const usersBefore=(await pool.query('SELECT id,password FROM serviam.users ORDER BY sort_id')).rows;
+    await pool.query('ALTER TABLE serviam.exams DROP COLUMN exam_type');
+    await pool.query('DELETE FROM serviam.schema_versions WHERE version=2');
+    const upgraded=await createConfiguredApp({config:{...config,superadminPassword:undefined,adminPassword:undefined},clock});applications.push(upgraded);
+    const restored=await upgraded.store.getExam(invitation.exam.id);
+    assert.equal(restored.exam_type,'serviam');
+    for(const key of ['answers','result','question_order','status','started_at','finished_at']) assert.equal(restored[key],original[key]);
+    assert.deepEqual((await pool.query('SELECT id,password FROM serviam.users ORDER BY sort_id')).rows,usersBefore);
+    assert.equal(upgraded.store.adminExam(restored).total,46);
+  });
+  await t.test('migrasi jenis ujian menjaga Serviam; Indo Artha dua instance, 82 jawaban dan jeda', async () => {
+    assert.equal((await pool.query('SELECT exam_type FROM serviam.exams WHERE id=$1',[invitation.exam.id])).rows[0].exam_type,'serviam');
+    assert.equal((await pool.query('SELECT version FROM serviam.schema_versions WHERE version=2')).rows.length,1);
+    const {M1_ITEMS,M2_ITEMS,M3_ITEMS} = await import('../lib/indo-artha/bank.js');
+    const invited=await admin.call('/api/admin/exams','POST',{name:'Peserta Indo Artha Postgres',examType:'indo-artha',role:'keu-staf'});assert.equal(invited.status,201);
+    const p=client(0), started=await p.call('/api/exam/start','POST',{token:invited.data.invitationPath.split('/').at(-1),consent:true});assert.equal(started.status,201);assert.equal(started.data.questions.length,30);
+    const parallel=client(1,p.cookie);
+    const saves=await Promise.all([p.call('/api/exam/answers','PATCH',{section:'M1',answers:{'M1-1':'D'}}),parallel.call('/api/exam/answers','PATCH',{section:'M1',answers:{'M1-2':'A'}})]);assert.deepEqual(saves.map(x=>x.status),[200,200]);
+    assert.equal((await p.call('/api/exam')).data.exam.answers['M1-2'],'A');
+    for(const [section,items] of [['M1',M1_ITEMS],['M3',M3_ITEMS]]) {
+      const answers=Object.fromEntries(items.map(q=>[q.id,section==='M1'?q.key:Object.keys(q.key).find(k=>q.key[k].points===3)]));
+      assert.equal((await parallel.call('/api/exam/answers','PATCH',{section,answers})).status,200);
+      assert.equal((await p.call('/api/exam/next','POST',{section})).status,200);
+    }
+    assert.equal((await p.call('/api/exam/next','POST',{section:'JEDA'})).status,409);
+    now+=10*60_000;
+    assert.equal((await parallel.call('/api/exam')).data.questions.length,40);
+    const gaya=Object.fromEntries(M2_ITEMS.map(q=>[q.id,3]));
+    assert.equal((await p.call('/api/exam/answers','PATCH',{section:'M2',answers:gaya})).status,200);
+    assert.equal((await parallel.call('/api/exam/next','POST',{section:'M2'})).data.exam.status,'completed');
+    const result=await admin.call(`/api/admin/exams/${invited.data.exam.id}`);assert.equal(result.status,200);assert.equal(result.data.exam.result.total,66);assert.equal(result.data.exam.answered,82);assert.equal(result.data.exam.result.analysis.m2.validity.sv,15);
+    assert.equal((await admin.call(`/api/admin/exams/${invited.data.exam.id}`,'PATCH',{note:'Bukti wawancara',decision:'ditahan',interview:{}})).status,200);
+  });
   await t.test('schema privat dan RLS menolak akses anon/authenticated; audit tidak mengandung sandi', async () => {
     for (const role of ['anon','authenticated']) assert.equal((await pool.query("SELECT has_schema_privilege($1,'serviam','USAGE') AS allowed",[role])).rows[0].allowed,false);
     const tables=(await pool.query("SELECT relname,relrowsecurity FROM pg_class JOIN pg_namespace ON pg_namespace.oid=relnamespace WHERE nspname='serviam' AND relname IN('users','exams','sessions','audit','rate_limits')")).rows;
