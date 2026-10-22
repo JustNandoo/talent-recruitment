@@ -213,6 +213,19 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     assert.equal((await admin.call(`/api/admin/templates/${type}/sources/source-1`)).data,'Referensi private test.');
     for(const role of ['anon','authenticated'])assert.equal((await pool.query("SELECT has_table_privilege($1,'serviam.exam_templates','SELECT') AS allowed",[role])).rows[0].allowed,false);
   });
+  await t.test('migrasi katalog menyisakan dua paket, arsip menjaga hasil dan sumber lama',async()=>{
+    const before=(await pool.query('SELECT count(*) AS n FROM serviam.exams')).rows[0].n;
+    const template=(await pool.query('SELECT id FROM serviam.exam_templates ORDER BY created_at DESC LIMIT 1')).rows[0];
+    await pool.query('ALTER TABLE serviam.exam_templates DROP COLUMN archived');
+    await pool.query('DELETE FROM serviam.schema_versions WHERE version=4');
+    applications.push(await createConfiguredApp({config,clock,secure:true}));
+    const meta=(await admin.call('/api/admin/meta')).data;
+    assert.deepEqual(meta.exams.filter(e=>!e.archived).map(e=>e.id),['serviam','indo-artha']);
+    assert.equal(meta.exams.find(e=>e.id===template.id).archived,true);
+    assert.equal((await pool.query('SELECT count(*) AS n FROM serviam.exams')).rows[0].n,before);
+    assert.equal((await admin.call(`/api/admin/templates/${template.id}/sources/source-1`)).status,200);
+    assert.equal((await pool.query('SELECT version FROM serviam.schema_versions WHERE version=4')).rows.length,1);
+  });
   await t.test('schema privat dan RLS menolak akses anon/authenticated; audit tidak mengandung sandi', async () => {
     for (const role of ['anon','authenticated']) assert.equal((await pool.query("SELECT has_schema_privilege($1,'serviam','USAGE') AS allowed",[role])).rows[0].allowed,false);
     const tables=(await pool.query("SELECT relname,relrowsecurity FROM pg_class JOIN pg_namespace ON pg_namespace.oid=relnamespace WHERE nspname='serviam' AND relname IN('users','exams','sessions','audit','rate_limits')")).rows;

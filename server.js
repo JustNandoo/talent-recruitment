@@ -108,8 +108,8 @@ export function createApp(options = {}) {
     return row ? JSON.parse(row.definition) : null;
   }
   async function listDefinitions() {
-    const rows=await db.prepare('SELECT definition FROM exam_templates ORDER BY created_at DESC').all();
-    return [...publicDefinitions(), ...rows.map(row=>customDefinitionSummary(JSON.parse(row.definition)))];
+    const rows=await db.prepare('SELECT definition,archived FROM exam_templates ORDER BY created_at DESC').all();
+    return [...publicDefinitions(), ...rows.map(row=>({...customDefinitionSummary(JSON.parse(row.definition)),archived:Boolean(row.archived)}))];
   }
   async function listExams() {
     const rows = await db.prepare('SELECT * FROM exams ORDER BY created_at DESC, rowid DESC').all();
@@ -236,7 +236,7 @@ export function createApp(options = {}) {
           await rateLimit(req,'create-template',30);
           const input=await readBody(req,4*1024*1024),id=`custom-${token()}`;
           const {definition,sources}=createCustomDefinition(input,id);
-          await db.prepare('INSERT INTO exam_templates(id,definition,sources,created_by,created_at) VALUES(?,?,?,?,?)').run(id,JSON.stringify(definition),JSON.stringify(sources),user.id,clock());
+          await db.prepare('INSERT INTO exam_templates(id,definition,sources,created_by,created_at,archived) VALUES(?,?,?,?,?,0)').run(id,JSON.stringify(definition),JSON.stringify(sources),user.id,clock());
           await store.audit(user.id,'exam_template_created',id);
           return send(201,{exam:customDefinitionSummary(definition)});
         }

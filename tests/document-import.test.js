@@ -49,3 +49,23 @@ test('PDF text reads numbered questions and inline keys without OCR',async()=>{
  let pdf='%PDF-1.4\n',offsets=[0];for(const [i,body]of objects.entries()){offsets.push(pdf.length);pdf+=`${i+1} 0 obj\n${body}\nendobj\n`;}const start=pdf.length;pdf+=`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${start}\n%%EOF`;
  const r=await importDocuments([source('soal.pdf',pdf)]);assert.equal(r.count,1);assert.equal(r.sections[0].questions[0].key,'B');assert.deepEqual(r.warnings,[]);
 });
+
+test('ZIP aplikasi Indo Artha dikenali tanpa duplikat; semua kunci, bobot, dan skala terisi',async()=>{
+ const names=['Soal Model 1 - Kognitif.docx','Kunci & Analisa Model 1 (rahasia).docx','Soal Model 2 - Gaya Kerja.docx','Kunci & Analisa Model 2 (rahasia).docx','Soal Model 3 - Situasional.docx','Kunci & Analisa Model 3 (rahasia).docx'];
+ const files=Object.fromEntries(names.map(name=>['psikotes-2/docs/sumber/'+name,readFileSync(new URL('../docs/indo-artha/'+name,import.meta.url))]));
+ files['psikotes-2/README.md']=strToU8('1. Langkah setup\nA. Jalankan kode\nB. Ubah konfigurasi\nKunci: A');
+ files['psikotes-2/server.js']=strToU8('throw new Error("Never run uploaded code")');
+ const r=await importDocuments([source('DIVISI-HR-Indo-Artha-Group-Psikotes (1).zip',zipSync(files))]);
+ assert.equal(r.count,82);assert.equal(r.builtinType,'indo-artha');assert.equal(r.suggestedName,'DIVISI HR · Indo Artha Group · Psikotes');
+ assert.deepEqual(r.keySummary,{choice:30,weighted:12,scale:40,missing:0});
+ assert.equal(r.sections.length,3);
+ // Different source content must never silently reuse the built-in scoring.
+ files['psikotes-2/docs/sumber/Soal Model 1 - Kognitif.docx']=docx([paragraph('1. Soal berbeda'),paragraph('A. Satu'),paragraph('B. Dua'),paragraph('Kunci: A')].join(''));
+ const custom=await importDocuments([source('custom.zip',zipSync(files))]);assert.equal(custom.builtinType,undefined);
+});
+test('kunci Word dalam tabel dua kolom dan nama bernomor dikenali otomatis',async()=>{
+ const cells=rows=>'<w:tbl>'+rows.map(row=>'<w:tr>'+row.map(c=>'<w:tc>'+paragraph(c)+'</w:tc>').join('')+'</w:tr>').join('')+'</w:tbl>';
+ const question=source('soal Model 1.docx',docx([paragraph('Model 1'),paragraph('1. Pilih yang benar'),paragraph('A. Satu'),paragraph('B. Dua')].join('')));
+ const answer=source('02-jawaban-final.docx',docx(paragraph('Kunci Model 1')+cells([['No','Kunci'],['1','B']])));
+ const r=await importDocuments([question,answer]);assert.equal(r.sections[0].questions[0].key,'B');assert.equal(r.keySummary.missing,0);
+});

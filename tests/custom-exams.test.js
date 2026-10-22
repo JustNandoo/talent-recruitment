@@ -77,3 +77,22 @@ test('API import Word hanya untuk penguji, CSRF terlindungi, hasil dapat langsun
  assert.equal((await f.admin.call('/api/admin/import-documents','POST',{sources:[{name:'fake.docx',data:Buffer.from('PK invalid').toString('base64')}]})).status,400);
  assert.equal((await f.client().call('/lib/document-import.js')).status,404);
 });
+
+test('katalog hanya dua paket aktif; migrasi mengarsipkan template lama tanpa menghapus hasil',async t=>{
+ const f=await fixture(t);
+ const meta=(await f.admin.call('/api/admin/meta')).data;
+ assert.deepEqual(meta.exams.filter(e=>!e.archived).map(e=>e.id),['serviam','indo-artha']);
+ assert.equal(meta.exams.find(e=>e.id==='indo-artha').label,'DIVISI HR · Indo Artha Group · Psikotes');
+ const created=await f.admin.call('/api/admin/templates','POST',definition());assert.equal(created.status,201);
+ const id=created.data.exam.id;
+ const invitation=await f.admin.call('/api/admin/exams','POST',{name:'Peserta historis',examType:id,role:'role-1'});assert.equal(invitation.status,201);
+ // Reproduce the pre-migration table; reopen applies the one-time archive flag.
+ f.app.store.db.exec('ALTER TABLE exam_templates DROP COLUMN archived');
+ await f.restart();
+ const after=(await f.admin.call('/api/admin/meta')).data;
+ assert.equal(after.exams.filter(e=>!e.archived).length,2);assert.equal(after.exams.find(e=>e.id===id).archived,true);
+ assert.equal((await f.admin.call('/api/admin/exams/'+invitation.data.exam.id)).status,200);
+ assert.equal((await f.admin.call(`/api/admin/templates/${id}/sources/source-1`)).status,200);
+ const newer=await f.admin.call('/api/admin/templates','POST',definition());assert.equal(newer.status,201);
+ assert.equal((await f.admin.call('/api/admin/meta')).data.exams.find(e=>e.id===newer.data.exam.id).archived,false);
+});
