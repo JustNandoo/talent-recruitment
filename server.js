@@ -267,7 +267,9 @@ export function createApp(options = {}) {
         if (path === '/api/admin/export' && method === 'GET') {
           await admin(req);
           const rows = [['Nama', 'Email', 'Posisi', 'Status', 'Jenis ujian', 'Skor tes', 'Skor maksimum', 'Persentase tes', 'Tinjauan', 'Rata-rata wawancara', 'Keputusan penguji', 'Selesai pada']];
-          (await listExams()).forEach(e => rows.push([e.name, e.email, e.roleName, e.status, e.examLabel, e.total, e.max, e.percent, e.review?.label, e.interviewSummary.average, e.decision, e.finishedAt ? new Date(e.finishedAt).toISOString() : '']));
+          const type=url.searchParams.get('examType');
+          assert(!type||await resolveDefinition(type),400,'Jenis ujian tidak ditemukan.');
+          (await listExams()).filter(e=>!type||e.examType===type).forEach(e => rows.push([e.name, e.email, e.roleName, e.status, e.examLabel, e.total, e.max, e.percent, e.review?.label, e.examType==='serviam'?e.interviewSummary.average:null, e.decision, e.finishedAt ? new Date(e.finishedAt).toISOString() : '']));
           res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="hasil-rekrutmen.csv"' });
           return res.end('\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n'));
         }
@@ -389,7 +391,7 @@ export function createApp(options = {}) {
         res.writeHead(302, { Location: '/' });
         return res.end();
       }
-      const assets = { '/app.js': 'app.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/exam-builder.js':'exam-builder.js', '/custom-exam-ui.js':'custom-exam-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
+      const assets = { '/app.js': 'app.js', '/exam-scope.js':'exam-scope.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/exam-builder.js':'exam-builder.js', '/custom-exam-ui.js':'custom-exam-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
       const asset = assets[path];
       const isPage = path === '/' || path === '/setup' || path === '/penguji' || /^\/penguji\/hasil\/[A-Za-z0-9_-]+$/.test(path) || /^\/ujian(?:\/[A-Za-z0-9_-]+)?$/.test(path);
       assert(asset || isPage, 404, 'Halaman tidak ditemukan.');

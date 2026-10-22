@@ -83,3 +83,7 @@
 .builder-source-list { margin-top:16px; font-size:13px; }
 .builder-error:empty { display:none; }
 @media(max-width:600px) { .builder-panel,.builder-question { padding:16px; } .builder-option { flex-wrap:wrap; } }
+
+.exam-scope { margin-bottom: 24px; }
+.exam-scope label { display: grid; gap: 8px; font-weight: 600; }
+.exam-scope select { width: 100%; max-width: 680px; padding: 12px; border: 1px solid var(--border, #dbe3dd); border-radius: 8px; background: white; color: inherit; }

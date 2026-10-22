@@ -4,7 +4,7 @@ import { projectRoot } from '../lib/config.js';
 import { join } from 'node:path';
 const config = JSON.parse(readFileSync(join(projectRoot, 'vercel.json'), 'utf8'));
 if (Number(process.versions.node.split('.')[0]) !== 24) throw new Error('Deployment Vercel memakai Node.js 24.x; periksa Node.js Version.');
-for (const file of ['server.js', 'api/handler.js', 'lib/postgres-store.js', 'public/app.js', 'lib/exams.js', 'lib/indo-artha/bank.js', 'lib/indo-artha/analysis.js', 'public/indo-artha-ui.js', 'public/exam-builder.js', 'public/custom-exam-ui.js', 'lib/custom-exams.js', 'lib/document-import.js']) execFileSync(process.execPath, ['--check', file], { cwd: projectRoot, stdio: 'inherit' });
+for (const file of ['server.js', 'api/handler.js', 'lib/postgres-store.js', 'public/app.js', 'public/exam-scope.js', 'lib/exams.js', 'lib/indo-artha/bank.js', 'lib/indo-artha/analysis.js', 'public/indo-artha-ui.js', 'public/exam-builder.js', 'public/custom-exam-ui.js', 'lib/custom-exams.js', 'lib/document-import.js']) execFileSync(process.execPath, ['--check', file], { cwd: projectRoot, stdio: 'inherit' });
 for (const file of ['public/index.html', 'public/style.css', 'public/serviam-logo.svg', 'docs/bank-soal.pdf', 'db/supabase.sql', 'db/exam-types.sql', 'db/custom-exams.sql', 'public/indo-artha-logo.png', 'docs/indo-artha/Panduan Penguji.docx']) if (!existsSync(join(projectRoot, file))) throw new Error(`File deployment hilang: ${file}`);
 if (config.routes?.[0]?.dest !== '/api/handler') throw new Error('Routing Vercel harus menuju handler server.');
 console.log('Pemeriksaan build Vercel lulus. Koneksi database diperiksa saat runtime, bukan saat build.');

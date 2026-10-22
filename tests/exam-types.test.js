@@ -79,3 +79,17 @@ test('deadline offline Indo Artha dan rotasi memakai paket yang sama; Serviam te
  assert.equal((await f.admin.call('/api/admin/exams/'+invitation.exam.id)).data.exam.result.analysis.m1.max,15);
  const old=await f.invite('serviam','administrasi');assert.equal(old.exam.questionCount,48);assert.equal(old.exam.max,46);assert.equal(old.exam.examType,'serviam');
 });
+
+test('hasil dan CSV dipisah per paket; cache hasil salah tidak tampil lintas ujian',async t=>{
+ const f=await fixture(t),meta=(await f.admin.call('/api/admin/meta')).data;
+ const indo=await f.invite(),serviam=await f.invite('serviam',meta.exams[0].roles[0].id);
+ f.app.store.db.prepare("UPDATE exams SET name=?,status='completed',answers=?,result=? WHERE id=?").run('Kandidat Baru Indo',JSON.stringify({...answersFor('M1'),...answersFor('M2'),...answersFor('M3')}),JSON.stringify({total:46,percent:100,sections:[],personality:{}}),indo.exam.id);
+ f.app.store.db.prepare("UPDATE exams SET name=?,status='completed',result=? WHERE id=?").run('Kandidat Lama Serviam',JSON.stringify({examType:'indo-artha',analysis:{pkg:'lengkap'},total:66}),serviam.exam.id);
+ const a=(await f.admin.call('/api/admin/exams/'+indo.exam.id)).data.exam;
+ assert.equal(a.result.examType,'indo-artha');assert.equal(a.result.total,66);assert.equal(a.result.analysis.m2.detail.length,40);
+ const b=(await f.admin.call('/api/admin/exams/'+serviam.exam.id)).data.exam;
+ assert.equal(b.result.examType,'serviam');assert.equal(b.result.analysis,undefined);assert.equal(b.result.sections.length,4);
+ const csvNew=await f.admin.call('/api/admin/export?examType=indo-artha');assert.equal(csvNew.status,200);assert.match(csvNew.data,/Kandidat Baru Indo/);assert.doesNotMatch(csvNew.data,/Kandidat Lama Serviam/);
+ const csvOld=await f.admin.call('/api/admin/export?examType=serviam');assert.match(csvOld.data,/Kandidat Lama Serviam/);assert.doesNotMatch(csvOld.data,/Kandidat Baru Indo/);
+ assert.equal((await f.admin.call('/api/admin/export?examType=tidak-ada')).status,400);
+});
