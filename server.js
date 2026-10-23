@@ -108,8 +108,8 @@ export function createApp(options = {}) {
     return row ? JSON.parse(row.definition) : null;
   }
   async function listDefinitions() {
-    const rows=await db.prepare('SELECT definition,archived FROM exam_templates ORDER BY created_at DESC').all();
-    return [...publicDefinitions(), ...rows.map(row=>({...customDefinitionSummary(JSON.parse(row.definition)),archived:Boolean(row.archived)}))];
+    const rows=await db.prepare('SELECT definition,archived,created_at FROM exam_templates ORDER BY created_at DESC').all();
+    return [...publicDefinitions(), ...rows.map(row=>({...customDefinitionSummary(JSON.parse(row.definition)),archived:Boolean(row.archived),createdAt:row.created_at,updatedAt:row.created_at}))];
   }
   async function listExams() {
     const rows = await db.prepare('SELECT * FROM exams ORDER BY created_at DESC, rowid DESC').all();
@@ -235,10 +235,10 @@ export function createApp(options = {}) {
           const user=await admin(req);
           await rateLimit(req,'create-template',30);
           const input=await readBody(req,4*1024*1024),id=`custom-${token()}`;
-          const {definition,sources}=createCustomDefinition(input,id);
-          await db.prepare('INSERT INTO exam_templates(id,definition,sources,created_by,created_at,archived) VALUES(?,?,?,?,?,0)').run(id,JSON.stringify(definition),JSON.stringify(sources),user.id,clock());
+          const {definition,sources}=createCustomDefinition(input,id),createdAt=clock();
+          await db.prepare('INSERT INTO exam_templates(id,definition,sources,created_by,created_at,archived) VALUES(?,?,?,?,?,0)').run(id,JSON.stringify(definition),JSON.stringify(sources),user.id,createdAt);
           await store.audit(user.id,'exam_template_created',id);
-          return send(201,{exam:customDefinitionSummary(definition)});
+          return send(201,{exam:{...customDefinitionSummary(definition),createdAt,updatedAt:createdAt}});
         }
         const sourceMatch=path.match(/^\/api\/admin\/templates\/(custom-[A-Za-z0-9_-]+)\/sources\/(source-\d+)$/);
         if(sourceMatch && method==='GET') {
@@ -287,6 +287,23 @@ export function createApp(options = {}) {
           assert(existsSync(pdf), 404, 'Dokumen sumber belum tersedia.');
           res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': 'attachment; filename="Bank-Soal-Psikotes.pdf"' });
           return res.end(readFileSync(pdf));
+        }
+        const reportMatch=path.match(/^\/api\/admin\/exams\/([A-Za-z0-9_-]+)\/(report\.pdf|print)$/);
+        if(reportMatch&&method==='GET'){
+          await admin(req);
+          const exam=await store.refreshExam(await store.getExam(reportMatch[1]));
+          assert(exam,404,'Peserta tidak ditemukan.');
+          assert(exam.status==='completed',409,'Laporan tersedia setelah ujian selesai.');
+          const {buildReport,createPdfReport,reportHtml}=await import('./lib/report.js');
+          const report=buildReport(store.adminExam(exam,true),clock());
+          if(reportMatch[2]==='print'){
+            res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
+            return res.end(reportHtml(report,`/api/admin/exams/${exam.id}/report.pdf`));
+          }
+          const pdf=await createPdfReport(report);
+          const filename=`hasil-${exam.name.replace(/[^A-Za-z0-9_-]/g,'-').slice(0,65)}.pdf`;
+          res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="${filename}"`});
+          return res.end(pdf);
         }
         const adminMatch = path.match(/^\/api\/admin\/exams\/([A-Za-z0-9_-]+)(\/rotate)?$/);
         if (adminMatch) {
@@ -391,7 +408,7 @@ export function createApp(options = {}) {
         res.writeHead(302, { Location: '/' });
         return res.end();
       }
-      const assets = { '/app.js': 'app.js', '/exam-scope.js':'exam-scope.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/exam-builder.js':'exam-builder.js', '/custom-exam-ui.js':'custom-exam-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
+      const assets = { '/app.js': 'app.js', '/report-print.js':'report-print.js', '/exam-scope.js':'exam-scope.js', '/indo-artha-ui.js':'indo-artha-ui.js', '/exam-builder.js':'exam-builder.js', '/custom-exam-ui.js':'custom-exam-ui.js', '/style.css': 'style.css', '/favicon.svg': 'favicon.svg', '/serviam-logo.svg': 'serviam-logo.svg', '/indo-artha-logo.png':'indo-artha-logo.png' };
       const asset = assets[path];
       const isPage = path === '/' || path === '/setup' || path === '/penguji' || /^\/penguji\/hasil\/[A-Za-z0-9_-]+$/.test(path) || /^\/ujian(?:\/[A-Za-z0-9_-]+)?$/.test(path);
       assert(asset || isPage, 404, 'Halaman tidak ditemukan.');

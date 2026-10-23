@@ -1,6 +1,6 @@
 {
   "name": "talenta-recruitment",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "description": "Ujian rekrutmen HRD Division PT Serviam Group Shipyard dengan akses sekali pakai, urutan soal per peserta, dan analisis penguji.",
   "type": "module",
@@ -23,6 +23,7 @@
     "fast-xml-parser": "^5.11.2",
     "fflate": "^0.8.3",
     "pdfjs-dist": "^6.4.299",
+    "pdfkit": "^0.20.2",
     "pg": "^8.23.1"
   }
 }
