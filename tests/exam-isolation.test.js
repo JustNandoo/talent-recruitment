@@ -46,6 +46,11 @@ test('hasil cache paket lain dihitung ulang dari jawaban sendiri; hasil lama yan
  }
  const historical=scoreForExam(serviam);delete historical.examType;
  assert.deepEqual(storedResultForExam({...serviam,result:JSON.stringify(historical)}),JSON.parse(JSON.stringify(historical)));
+  const oldIndo=scoreForExam(indo);
+  oldIndo.sections.find(s=>s.id==='M3').details[0].analysis='Tes Penilaian Situasional';
+  const refreshed=storedResultForExam({...indo,result:JSON.stringify(oldIndo)});
+  assert.equal(refreshed.total,oldIndo.total);
+  assert.match(refreshed.sections.find(s=>s.id==='M3').details[0].analysis,/Kasus 1.*pilihan/);
  const custom=createCustomDefinition({name:'Custom lama',company:'Uji',roles:['Umum'],sections:[{name:'Bagian 1',minutes:1,questions:[{kind:'choice',prompt:'Pilih satu.',options:['Satu','Dua'],key:'A'}]}]},'custom-test').definition;
  const r=storedResultForExam({exam_type:custom.id,exam_definition:JSON.stringify(custom),answers:'{"S1-Q1":"A"}',result:JSON.stringify(scoreForExam(indo)),role:'role-1'});
  assert.equal(r.custom,true);assert.equal(r.total,1);assert.equal(r.analysis,undefined);
