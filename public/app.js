@@ -221,7 +221,23 @@ function confirmAction(title, message, label = 'Lanjutkan', danger = false) {
 }
 function inviteModal(type = 'serviam') {
   const definition=state.meta.exams.find(e=>e.id===type) || state.meta.exams[0];
-  showModal('Ujian baru · Buat undangan', `<p class="modal-description">Pilih ujian, isi peserta, lalu bagikan tautan pribadi. Satu undangan memakai satu bank soal dan aturan penilaian.</p><form id="invite-form" class="stack-form"><label>Jenis ujian<select name="examType" id="invite-exam-type">${state.meta.exams.filter(e=>!e.archived).map(e=>`<option value="${e.id}" ${e.id===definition.id?'selected':''}>${esc(e.label)}</option>`).join('')}</select></label><p id="invite-exam-summary" class="muted">${definition.count} butir · ${definition.minutes} menit · ${esc(definition.company)}</p><label>Nama peserta<input name="name" placeholder="Nama lengkap peserta" minlength="2" maxlength="80" required /></label><label>Email peserta <span class="optional">opsional</span><input name="email" type="email" placeholder="peserta@email.com" /></label><div class="form-two-col"><label>Posisi<select name="role" id="invite-role">${definition.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></label><label>Masa berlaku<select name="expiryDays"><option value="7">7 hari</option><option value="1">1 hari</option><option value="14">14 hari</option><option value="30">30 hari</option></select></label></div><p class="form-error" id="invite-error" role="alert"></p><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Batal</button><button class="button primary" type="submit">Buat undangan ${icon('arrow')}</button></div></form>`);
+  showModal('Ujian baru · Buat undangan', `<p class="modal-description">Pilih ujian, isi peserta, lalu bagikan tautan pribadi. Satu undangan memakai satu bank soal dan aturan penilaian.</p><form id="invite-form" class="stack-form"><label>Jenis ujian<select name="examType" id="invite-exam-type">${state.meta.exams.filter(e=>!e.archived).map(e=>`<option value="${e.id}" ${e.id===definition.id?'selected':''}>${esc(e.label)}</option>`).join('')}</select></label><p id="invite-exam-summary" class="muted">${definition.count} butir · ${definition.minutes} menit · ${esc(definition.company)}</p><label>Nama peserta<input name="name" placeholder="Nama lengkap peserta" minlength="2" maxlength="80" required /></label><label>Email peserta<input name="email" type="email" placeholder="peserta@email.com" autocomplete="email" maxlength="254" required /></label><div class="form-two-col"><label>Posisi<select name="role" id="invite-role">${definition.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></label><label>Masa berlaku<select name="expiryDays"><option value="7">7 hari</option><option value="1">1 hari</option><option value="14">14 hari</option><option value="30">30 hari</option></select></label></div><p class="form-error" id="invite-error" role="alert"></p><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Batal</button><button class="button primary" type="submit">Buat undangan ${icon('arrow')}</button></div></form>`);
+  syncInvitationDefinition();
+}
+function syncInvitationDefinition() {
+  const form = $('#invite-form');
+  if (!form) return null;
+  const definition = state.meta.exams.find(exam => exam.id === form.elements.examType.value && !exam.archived);
+  if (!definition) throw new Error('Jenis ujian tidak tersedia. Pilih ulang jenis ujian.');
+  const roles = form.elements.role;
+  const selectedRole = roles.value;
+  if (roles.dataset.examType !== definition.id || !definition.roles.some(role => role.id === selectedRole)) {
+    roles.innerHTML = definition.roles.map(role => `<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('');
+    if (definition.roles.some(role => role.id === selectedRole)) roles.value = selectedRole;
+    roles.dataset.examType = definition.id;
+  }
+  $('#invite-exam-summary').textContent = `${definition.count} butir · ${definition.minutes} menit · ${definition.company}`;
+  return definition;
 }
 function catalogDates(exam) {
   const time=value=>`<time datetime="${new Date(value).toISOString()}">${dateTime(value)}</time>`;
@@ -384,16 +400,13 @@ app.addEventListener('input', event => {
     $('#participant-results').innerHTML=participantTable(exams);
     $('.table-footer').innerHTML=`${exams.length} peserta ditampilkan <span>Undangan tidak dikirim otomatis; bagikan tautan secara pribadi.</span>`;
   }
+  if (field.id==='invite-exam-type') syncInvitationDefinition();
   if (field.id==='text-answer') queueAnswer(field.dataset.question,field.value);
 });
 app.addEventListener('change', event => {
   const field=event.target;
   if(field.id==='exam-scope'){state.examFilter=field.value;state.filter='all';state.search='';renderAdmin();return;}
-  if(field.id==='invite-exam-type') {
-    const d=state.meta.exams.find(e=>e.id===field.value);
-    $('#invite-role').innerHTML=d.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('');
-    $('#invite-exam-summary').textContent=`${d.count} butir · ${d.minutes} menit · ${d.company}`;
-  }
+  if(field.id==='invite-exam-type') syncInvitationDefinition();
   if (field.matches('input[type="radio"][data-question]')) {
     const q=state.exam.questions.find(q=>q.id===field.dataset.question);
     queueAnswer(q.id,q.kind==='likert'?Number(field.value):field.value);
@@ -485,6 +498,12 @@ document.addEventListener('submit', async event => {
       setView('users'); toast('Akun berhasil disimpan.');
     }
     if (form.id==='invite-form') {
+      const definition = syncInvitationDefinition();
+      if (!definition.roles.some(role => role.id === form.elements.role.value)) throw new Error('Pilih posisi yang sesuai dengan jenis ujian.');
+      data.examType = definition.id;
+      data.role = form.elements.role.value;
+      data.name = data.name.trim();
+      data.email = data.email.trim().toLowerCase();
       const result=await api('/api/admin/exams','POST',{...data,expiryDays:Number(data.expiryDays)});
       state.exams=(await api('/api/admin/exams')).exams; renderAdmin(); invitationModal(result.invitationPath,result.exam.name,result.publicOrigin);
     }

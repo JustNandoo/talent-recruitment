@@ -110,14 +110,14 @@ test('konfigurasi produksi menolak HTTP; cookie, origin publik dan CSRF mengikut
   assert.match(response.headers.get('strict-transport-security'), /31536000/);
   await c.call('/api/admin/password', 'POST', { currentPassword: f.credentials[0].password, password: randomBytes(24).toString('base64url') });
   assert.equal((await c.call('/api/admin/exams', 'POST', { name: 'Peserta', role: 'umum' }, { Origin: 'http://other.test' })).status, 403);
-  const invite = await c.call('/api/admin/exams', 'POST', { name: 'Peserta', role: 'umum' }, { Origin: f.config.origin });
+  const invite = await c.call('/api/admin/exams', 'POST', { name: 'Peserta', email: 'peserta@example.test', role: 'umum' }, { Origin: f.config.origin });
   assert.equal(invite.status, 201);
   assert.equal(invite.data.publicOrigin, f.config.origin);
 });
 
 test('backup SQLite saat server aktif membawa jawaban WAL dan dapat dibuka kembali', async t => {
   const f = await fixture(t), c = await f.login(0);
-  const invite = await c.call('/api/admin/exams', 'POST', { name: 'Peserta backup', role: 'umum' });
+  const invite = await c.call('/api/admin/exams', 'POST', { name: 'Peserta backup', email: 'backup@example.test', role: 'umum' });
   const participant = f.client();
   await participant.call('/api/exam/start', 'POST', { token: invite.data.invitationPath.split('/').at(-1), consent: true });
   await participant.call('/api/exam/answers', 'PATCH', { section: 'A', answers: { A1: '48' } });

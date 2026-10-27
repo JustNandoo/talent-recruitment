@@ -76,7 +76,7 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     assert.equal((await client().call('/api/admin/source')).status, 401);
   });
   async function invite(name='Peserta Supabase') {
-    const response = await admin.call('/api/admin/exams','POST',{ name, role:'administrasi' }); assert.equal(response.status, 201);
+    const response = await admin.call('/api/admin/exams','POST',{ name, email:'postgres@example.test', role:'administrasi' }); assert.equal(response.status, 201);
     return { ...response.data, token:response.data.invitationPath.split('/').at(-1) };
   }
   let invitation, participant, order;
@@ -177,7 +177,7 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     assert.equal((await pool.query('SELECT exam_type FROM serviam.exams WHERE id=$1',[invitation.exam.id])).rows[0].exam_type,'serviam');
     assert.equal((await pool.query('SELECT version FROM serviam.schema_versions WHERE version=2')).rows.length,1);
     const {M1_ITEMS,M2_ITEMS,M3_ITEMS} = await import('../lib/indo-artha/bank.js');
-    const invited=await admin.call('/api/admin/exams','POST',{name:'Peserta Indo Artha Postgres',examType:'indo-artha',role:'keu-staf'});assert.equal(invited.status,201);
+    const invited=await admin.call('/api/admin/exams','POST',{name:'Peserta Indo Artha Postgres',email:'indo-postgres@example.test',examType:'indo-artha',role:'keu-staf'});assert.equal(invited.status,201);
     const p=client(0), started=await p.call('/api/exam/start','POST',{token:invited.data.invitationPath.split('/').at(-1),consent:true});assert.equal(started.status,201);assert.equal(started.data.questions.length,30);
     const parallel=client(1,p.cookie);
     const saves=await Promise.all([p.call('/api/exam/answers','PATCH',{section:'M1',answers:{'M1-1':'D'}}),parallel.call('/api/exam/answers','PATCH',{section:'M1',answers:{'M1-2':'A'}})]);assert.deepEqual(saves.map(x=>x.status),[200,200]);
@@ -201,7 +201,7 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     const made=await admin.call('/api/admin/templates','POST',body);assert.equal(made.status,201);const type=made.data.exam.id;
     assert.equal((await pool.query('SELECT version FROM serviam.schema_versions WHERE version=3')).rows.length,1);
     assert.equal((await client(1,admin.cookie).call('/api/admin/meta')).data.exams.some(e=>e.id===type),true);
-    const invited=await admin.call('/api/admin/exams','POST',{name:'Peserta custom',examType:type,role:'role-1'});assert.equal(invited.status,201);
+    const invited=await admin.call('/api/admin/exams','POST',{name:'Peserta custom',email:'custom-postgres@example.test',examType:type,role:'role-1'});assert.equal(invited.status,201);
     const stored=(await pool.query('SELECT definition FROM serviam.exam_templates WHERE id=$1',[type])).rows[0];
     const edited=JSON.parse(stored.definition);edited.questions[0].answer='A';await pool.query('UPDATE serviam.exam_templates SET definition=$1 WHERE id=$2',[JSON.stringify(edited),type]);
     const p=client(1);const started=await p.call('/api/exam/start','POST',{token:invited.data.invitationPath.split('/').at(-1),consent:true});assert.equal(started.status,201);assert.equal(started.data.exam.custom,true);

@@ -255,12 +255,16 @@ export function createApp(options = {}) {
           const body = await readBody(req);
           const definition = await resolveDefinition(body.examType ?? 'serviam');
           assert(definition, 400, 'Pilih jenis ujian yang tersedia.');
-          assert(textValid(body.name, 2, 80) && (!body.email || emailValid(body.email)) && definition.roles.some(r => r.id === body.role), 400, 'Nama, email, atau posisi tidak valid.');
+          assert(textValid(body.name, 2, 80), 400, 'Nama peserta wajib diisi (2–80 karakter).');
+          const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+          assert(email, 400, 'Email peserta wajib diisi.');
+          assert(emailValid(email), 400, 'Format email peserta tidak valid. Periksa alamat email lalu coba lagi.');
+          assert(definition.roles.some(r => r.id === body.role), 400, `Posisi tidak sesuai dengan jenis ujian ${definition.label}. Pilih ulang posisi peserta.`);
           const rawToken = token();
           const id = token();
           const expiryDays = Number(body.expiryDays ?? 7);
           assert(Number.isInteger(expiryDays) && expiryDays >= 1 && expiryDays <= 30, 400, 'Masa berlaku harus 1–30 hari.');
-          (await db.prepare('INSERT INTO exams(id,name,email,role,token_hash,created_at,expires_at,created_by,question_order,exam_type,exam_definition) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id, body.name.trim(), (body.email || '').trim().toLowerCase(), body.role, hash(rawToken), clock(), clock() + expiryDays * 86400_000, user.id, JSON.stringify(createQuestionOrder(definition)), definition.id, definition.custom ? JSON.stringify(definition) : null));
+          (await db.prepare('INSERT INTO exams(id,name,email,role,token_hash,created_at,expires_at,created_by,question_order,exam_type,exam_definition) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id, body.name.trim(), email, body.role, hash(rawToken), clock(), clock() + expiryDays * 86400_000, user.id, JSON.stringify(createQuestionOrder(definition)), definition.id, definition.custom ? JSON.stringify(definition) : null));
           (await store.audit(user.id, 'invitation_created', id));
           return send(201, { exam: store.adminExam((await store.getExam(id))), invitationPath: `/ujian/${rawToken}`, ...(origin ? { publicOrigin: origin } : {}) });
         }

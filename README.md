@@ -44,7 +44,7 @@ Perintah ini hanya bekerja pada database tanpa akun. Konfigurasi produksi memaka
 
 ## Alur penguji dan peserta
 
-1. Penguji masuk, memilih **Add invitation**, dan mengisi nama serta posisi peserta. Email opsional. Masa berlaku undangan dapat dipilih 1, 7, 14, atau 30 hari.
+1. Penguji masuk, memilih **Add invitation**, dan mengisi nama, email, serta posisi peserta. Email wajib diisi. Masa berlaku undangan dapat dipilih 1, 7, 14, atau 30 hari.
 2. Tekan **Copy link**, lalu bagikan tautan sendiri melalui WhatsApp, pesan, atau saluran yang Anda pilih. Aplikasi tidak mengirim email secara otomatis dan hanya menyimpan hash token. Tautan asli hanya tampil saat dibuat. **Buat ulang tautan** membatalkan tautan lama, hanya jika peserta belum mulai.
 3. Peserta membaca instruksi, menyetujui pengolahan hasil untuk rekrutmen, lalu mulai. **Satu kali berarti satu kesempatan ujian**, bukan satu kali membuka halaman instruksi. Token dikonsumsi atomik saat mulai dan tidak dapat digunakan dari browser kedua.
 4. Sesi dapat dilanjutkan di browser yang sama, dengan cookie yang sama, selama batas waktu belum habis. Jawaban disimpan otomatis di server. Kegagalan penyimpanan ditampilkan dan perpindahan bagian menunggu penyimpanan berhasil.

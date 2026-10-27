@@ -18,7 +18,7 @@ async function fixture(t) {
   const admin=client();
   const result=await admin.call('/api/setup','POST',{name:'Penguji tes',email:'exam-test@example.test',password:'Test-isolated-password-2026',setupCode:readFileSync(app.store.bootstrapPath,'utf8')});assert.equal(result.status,201);
   t.after(async()=>{await new Promise(resolve=>app.server.close(resolve));app.store.close();rmSync(dir,{recursive:true,force:true});});
-  const invite=async(type='indo-artha',role='keu-staf')=>{const result=await admin.call('/api/admin/exams','POST',{name:'Peserta Indo Artha',role,examType:type});assert.equal(result.status,201);return {...result.data,token:result.data.invitationPath.split('/').at(-1)};};
+  const invite=async(type='indo-artha',role='keu-staf')=>{const result=await admin.call('/api/admin/exams','POST',{name:'Peserta Indo Artha',email:'indo@example.test',role,examType:type});assert.equal(result.status,201);return {...result.data,token:result.data.invitationPath.split('/').at(-1)};};
   return {admin,client,invite,advance:ms=>{now+=ms;},get app(){return app;},async restart(){await new Promise(resolve=>app.server.close(resolve));app.store.close();app=createApp({dataDir:dir,clock:()=>now});await listen();}};
 }
 const answersFor = section => Object.fromEntries((section==='M1'?M1_ITEMS:section==='M2'?M2_ITEMS:M3_ITEMS).map(q=>[q.id,section==='M1'?q.key:section==='M2'?3:Object.keys(q.key).find(l=>q.key[l].points===3)]));
@@ -40,7 +40,16 @@ test('bank Indo Artha terpisah: 82 soal, paket ringkas, acak utuh, stimulus, dan
 test('undangan memvalidasi posisi per ujian, metadata katalog, dokumen rahasia dilindungi',async t=>{
   const f=await fixture(t);
   const meta=await f.admin.call('/api/admin/meta');assert.equal(meta.data.exams.length,3);
-  for(const body of [{examType:'unknown',role:'keu-staf'},{examType:'indo-artha',role:'administrasi'},{examType:'serviam',role:'keu-staf'},{examType:'indo-artha-ringkas',role:'keu-mgr'}]) assert.equal((await f.admin.call('/api/admin/exams','POST',{name:'Peserta uji',...body})).status,400);
+  for(const body of [{examType:'unknown',role:'keu-staf'},{examType:'indo-artha',role:'administrasi'},{examType:'serviam',role:'keu-staf'},{examType:'indo-artha-ringkas',role:'keu-mgr'}]) assert.equal((await f.admin.call('/api/admin/exams','POST',{name:'Peserta uji',email:'uji@example.test',...body})).status,400);
+  const base={name:'Peserta uji',examType:'indo-artha',role:'keu-staf'};
+  const missingEmail=await f.admin.call('/api/admin/exams','POST',base);
+  assert.equal(missingEmail.status,400);assert.match(missingEmail.data.error,/Email peserta wajib/);
+  const invalidEmail=await f.admin.call('/api/admin/exams','POST',{...base,email:'bukan-email'});
+  assert.equal(invalidEmail.status,400);assert.match(invalidEmail.data.error,/Format email peserta/);
+  const invalidRole=await f.admin.call('/api/admin/exams','POST',{...base,email:'uji@example.test',role:'umum'});
+  assert.equal(invalidRole.status,400);assert.match(invalidRole.data.error,/Posisi tidak sesuai.*Indo Artha/);
+  const valid=await f.admin.call('/api/admin/exams','POST',{...base,email:'  PESERTA@EXAMPLE.TEST  '});
+  assert.equal(valid.status,201);assert.equal(valid.data.exam.email,'peserta@example.test');assert.equal(valid.data.exam.questionCount,82);
   assert.equal((await f.client().call('/api/admin/source?examType=indo-artha&document=Kunci%20%26%20Analisa%20Model%201%20(rahasia).docx')).status,401);
   assert.equal((await f.admin.call('/api/admin/source?examType=indo-artha&document=Panduan%20Penguji.docx')).status,200);
   assert.equal((await f.admin.call('/api/admin/source?examType=indo-artha&document=../../.env')).status,404);

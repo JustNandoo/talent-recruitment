@@ -6,7 +6,7 @@
 4. Pilih profil **Serviam HRD - Web**, lalu tekan **Run** atau **Shift+F10**. Profil tersimpan di `.run/Serviam HRD.run.xml`. Alternatif: terminal WebStorm → `npm start`.
 5. Browser lokal dibuka setelah server siap. Gunakan alamat yang tercetak di konsol, biasanya `http://localhost:3000/`. Biarkan proses Run tetap berjalan; Stop menghentikan aplikasi.
 6. Pada instalasi baru, buka `.data/initial-accounts.txt` di editor **lokal**. Pilih akun `superadmin@serviam.local` atau `admin@serviam.local`. Masukkan kata sandi awal dari file, kemudian ganti melalui halaman keamanan yang muncul. Jangan mengunggah file ini ke GitHub.
-7. Dari dashboard penguji, tekan **Add invitation**, isi nama/posisi peserta (email hanya identitas opsional), tekan **Buat undangan**, lalu **Copy link**. Bagikan link sendiri melalui WhatsApp atau saluran lain.
+7. Dari dashboard penguji, tekan **Add invitation**, isi nama, email, dan posisi peserta, tekan **Buat undangan**, lalu **Copy link**. Bagikan link sendiri melalui WhatsApp atau saluran lain.
 
 Akun superadmin memiliki menu **Akun penguji** serta **Sistem & aktivitas**. Akun admin berfokus pada peserta dan hasil. Instalasi yang sudah mempunyai akun mempertahankannya; gunakan superadmin untuk menambah akun admin bila belum tersedia.
 

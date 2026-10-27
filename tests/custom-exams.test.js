@@ -51,7 +51,7 @@ test('custom tersimpan setelah restart; undangan memakai snapshot dan sumber dil
  input.createdAt=1;const before=Date.now();
  const created=await f.admin.call('/api/admin/templates','POST',input);assert.equal(created.status,201);assert.ok(created.data.exam.createdAt>=before);const addedAt=created.data.exam.createdAt;const type=created.data.exam.id;assert.ok(type.startsWith('custom-'));
  const meta=await f.admin.call('/api/admin/meta');const d=meta.data.exams.find(d=>d.id===type);assert.equal(d.count,4);assert.equal(d.createdAt,addedAt);assert.equal(d.updatedAt,addedAt);assert.equal('questions' in d,false);assert.equal('data' in d.sources[0],false);
- const invitation=await f.admin.call('/api/admin/exams','POST',{name:'Peserta Custom',examType:type,role:'role-1'});assert.equal(invitation.status,201);const id=invitation.data.exam.id,token=invitation.data.invitationPath.split('/').at(-1);
+ const invitation=await f.admin.call('/api/admin/exams','POST',{name:'Peserta Custom',email:'custom@example.test',examType:type,role:'role-1'});assert.equal(invitation.status,201);const id=invitation.data.exam.id,token=invitation.data.invitationPath.split('/').at(-1);
  const saved=f.app.store.getExam(id);assert.ok(saved.exam_definition);assert.equal(JSON.parse(saved.exam_definition).sources[0].data,undefined);
  const changed=JSON.parse(f.app.store.db.prepare('SELECT definition FROM exam_templates WHERE id=?').get(type).definition);changed.questions[0].answer='A';changed.sections[0].minutes=30;f.app.store.db.prepare('UPDATE exam_templates SET definition=? WHERE id=?').run(JSON.stringify(changed),type);
  await f.restart();
@@ -87,7 +87,7 @@ test('katalog hanya dua paket aktif; migrasi mengarsipkan template lama tanpa me
  assert.equal(meta.exams.find(e=>e.id==='indo-artha').label,'DIVISI HR · Indo Artha Group · Psikotes');
  const created=await f.admin.call('/api/admin/templates','POST',definition());assert.equal(created.status,201);
  const id=created.data.exam.id;
- const invitation=await f.admin.call('/api/admin/exams','POST',{name:'Peserta historis',examType:id,role:'role-1'});assert.equal(invitation.status,201);
+ const invitation=await f.admin.call('/api/admin/exams','POST',{name:'Peserta historis',email:'historis@example.test',examType:id,role:'role-1'});assert.equal(invitation.status,201);
  // Reproduce the pre-migration table; reopen applies the one-time archive flag.
  f.app.store.db.exec('ALTER TABLE exam_templates DROP COLUMN archived');
  await f.restart();
@@ -101,7 +101,7 @@ test('katalog hanya dua paket aktif; migrasi mengarsipkan template lama tanpa me
 
 test('PDF dan cetak hanya untuk penguji setelah selesai, mencakup hasil custom dan aman dari HTML',async t=>{
  const f=await fixture(t),made=await f.admin.call('/api/admin/templates','POST',definition()),type=made.data.exam.id;
- const invite=await f.admin.call('/api/admin/exams','POST',{name:'Peserta Laporan',examType:type,role:'role-1'}),id=invite.data.exam.id;
+ const invite=await f.admin.call('/api/admin/exams','POST',{name:'Peserta Laporan',email:'laporan@example.test',examType:type,role:'role-1'}),id=invite.data.exam.id;
  for(const suffix of ['report.pdf','print']){
   assert.equal((await f.client().call(`/api/admin/exams/${id}/${suffix}`)).status,401);
   assert.equal((await f.admin.call(`/api/admin/exams/${id}/${suffix}`)).status,409);
