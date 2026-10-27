@@ -196,6 +196,18 @@ test('PostgreSQL dan handler Vercel: migrasi, banyak instance, ujian, akses, ser
     const result=await admin.call(`/api/admin/exams/${invited.data.exam.id}`);assert.equal(result.status,200);assert.equal(result.data.exam.result.total,66);assert.equal(result.data.exam.answered,82);assert.equal(result.data.exam.result.analysis.m2.validity.sv,15);
     assert.equal((await admin.call(`/api/admin/exams/${invited.data.exam.id}`,'PATCH',{note:'Bukti wawancara',decision:'ditahan',interview:{}})).status,200);
   });
+  await t.test('jabatan buatan sendiri tersimpan dengan acuan penilaian pada PostgreSQL', async () => {
+    assert.equal((await pool.query('SELECT version FROM serviam.schema_versions WHERE version=5')).rows.length,1);
+    const body={name:'Peserta Analis',email:'analis@example.test',examType:'indo-artha',role:'keu-staf',positionName:'Analis Piutang'};
+    const invited=await admin.call('/api/admin/exams','POST',body);
+    assert.equal(invited.status,201);
+    assert.equal(invited.data.exam.roleName,'Analis Piutang');
+    assert.equal(invited.data.exam.scoringRoleName,'Staf Keuangan / Akuntansi');
+    const saved=(await pool.query('SELECT role,position_name FROM serviam.exams WHERE id=$1',[invited.data.exam.id])).rows[0];
+    assert.deepEqual(saved,{role:'keu-staf',position_name:'Analis Piutang'});
+    const exam=await client().call('/api/invitations/'+invited.data.invitationPath.split('/').at(-1));
+    assert.equal(exam.data.invitation.role,'Analis Piutang');
+  });
   await t.test('ujian custom dan sumber tersimpan lintas instance dengan snapshot kunci', async () => {
     const body={name:'Ujian Custom Postgres',company:'Perusahaan Tes',roles:['Staf'],sections:[{name:'Pengetahuan',minutes:5,questions:[{kind:'choice',prompt:'Jawaban yang benar?',options:['Salah','Benar'],key:'B',points:2}]}],sources:[{name:'sumber.txt',data:Buffer.from('Referensi private test.').toString('base64')}]};
     const made=await admin.call('/api/admin/templates','POST',body);assert.equal(made.status,201);const type=made.data.exam.id;

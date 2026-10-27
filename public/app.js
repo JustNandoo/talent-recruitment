@@ -183,7 +183,7 @@ function detailView() {
   const buttons = `${result?`<a class="button secondary report-action" href="/api/admin/exams/${encodeURIComponent(e.id)}/report.pdf" download>${icon('download')} Unduh PDF</a><a class="button secondary report-action" href="/api/admin/exams/${encodeURIComponent(e.id)}/print" target="_blank" rel="noopener">${icon('file')} Cetak hasil</a>`:''}${e.status === 'pending' || e.status === 'expired' ? '<button class="button secondary" data-action="rotate">' + icon('link') + ' Buat ulang tautan</button>' : ''}${e.status !== 'active' ? '<button class="icon-button bordered danger" data-action="delete" aria-label="Hapus data peserta" title="Hapus data peserta">' + icon('trash') + '</button>' : ''}`;
   if(e.custom) return customDetailView(e,{buttons,decisionLabel,dateTime,examBadge,tab:state.detailTab});
   if(e.examType && e.examType !== 'serviam') return indoDetailView(e,{buttons,decisionLabel,dateTime,badge,examBadge,tab:state.detailTab});
-  return `<button class="text-button back-button" data-action="view" data-view="participants">${icon('back')} Semua peserta</button>${pageHead('HASIL ASESMEN', esc(e.name), `${esc((e.roleName || roleName(e.role)))} <span class="dot-separator">·</span> ${esc(e.email || 'Email tidak dicantumkan')}`, buttons)}<div class="detail-meta">${examBadge(e)}<span>${icon('clock')} ${e.finishedAt ? 'Selesai ' + dateTime(e.finishedAt) : 'Diundang ' + dateTime(e.createdAt)}</span><span>${icon('shield')} Satu kesempatan</span></div>${!result ? `<section class="panel"><div class="empty-state"><span class="empty-icon">${icon(e.status === 'active' ? 'clock' : 'mail')}</span><h3>${e.status === 'active' ? 'Peserta sedang mengerjakan ujian' : e.status === 'expired' ? 'Undangan sudah kedaluwarsa' : 'Menunggu peserta memulai'}</h3><p>${e.status === 'active' ? `Bagian ${state.meta.sections[e.sectionIndex].name} · ${e.answered}/48 jawaban tersimpan. Hasil tersedia saat ujian selesai.` : e.status === 'expired' ? 'Buat ulang tautan untuk memperpanjang undangan yang belum digunakan.' : 'Bagikan tautan pribadi ke peserta. Nilai dihitung ketika peserta selesai atau waktu ujian habis.'}</p>${e.status === 'active' ? '<button class="button secondary" data-action="refresh-detail">Perbarui status</button>' : ''}</div></section>` : `<section class="result-overview panel"><div class="result-score" style="--progress:${result.percent}%"><div><strong>${result.total}<small>/46</small></strong><span>Skor A–D</span></div></div><div class="result-summary"><span class="eyebrow">TINJAUAN TES TERTULIS</span><h2>${esc(e.review.label)}</h2><p>${result.minimumsMet ? 'Semua batas minimum A–D terpenuhi.' : 'Ada bagian A–D yang belum memenuhi batas minimum.'} ${e.interviewSummary.complete ? 'Wawancara telah dinilai.' : 'Lengkapi wawancara sebelum mengambil keputusan akhir.'}</p><div class="result-summary-tags">${badge(`${result.answered}/48 terjawab`, 'gray')}${badge(e.finishReason === 'timeout' ? 'Waktu ujian habis' : 'Dikirim peserta', e.finishReason === 'timeout' ? 'amber' : 'green')}</div></div><div class="decision-box"><span>Keputusan penguji</span><strong>${esc(decisionLabel[e.decision])}</strong><small>Ditentukan secara manual</small></div></section><div class="detail-tabs tabs"><button data-action="detail-tab" data-tab="analysis" class="tab ${state.detailTab === 'analysis' ? 'active' : ''}">Analisis & skor</button><button data-action="detail-tab" data-tab="answers" class="tab ${state.detailTab === 'answers' ? 'active' : ''}">Rincian jawaban</button><button data-action="detail-tab" data-tab="interview" class="tab ${state.detailTab === 'interview' ? 'active' : ''}">Wawancara & keputusan <span>${e.interviewSummary.count}/6</span></button></div>${state.detailTab === 'answers' ? answersView(result, e.questionOrder) : state.detailTab === 'interview' ? interviewView(e) : analysisView(result)}`}`;
+  return `<button class="text-button back-button" data-action="view" data-view="participants">${icon('back')} Semua peserta</button>${pageHead('HASIL ASESMEN', esc(e.name), `${esc((e.roleName || roleName(e.role)))} <span class="dot-separator">·</span> ${esc(e.email || 'Email tidak dicantumkan')}${e.scoringRoleName ? ` <span class="dot-separator">·</span> Acuan penilaian: ${esc(e.scoringRoleName)}` : ''}`, buttons)}<div class="detail-meta">${examBadge(e)}<span>${icon('clock')} ${e.finishedAt ? 'Selesai ' + dateTime(e.finishedAt) : 'Diundang ' + dateTime(e.createdAt)}</span><span>${icon('shield')} Satu kesempatan</span></div>${!result ? `<section class="panel"><div class="empty-state"><span class="empty-icon">${icon(e.status === 'active' ? 'clock' : 'mail')}</span><h3>${e.status === 'active' ? 'Peserta sedang mengerjakan ujian' : e.status === 'expired' ? 'Undangan sudah kedaluwarsa' : 'Menunggu peserta memulai'}</h3><p>${e.status === 'active' ? `Bagian ${state.meta.sections[e.sectionIndex].name} · ${e.answered}/48 jawaban tersimpan. Hasil tersedia saat ujian selesai.` : e.status === 'expired' ? 'Buat ulang tautan untuk memperpanjang undangan yang belum digunakan.' : 'Bagikan tautan pribadi ke peserta. Nilai dihitung ketika peserta selesai atau waktu ujian habis.'}</p>${e.status === 'active' ? '<button class="button secondary" data-action="refresh-detail">Perbarui status</button>' : ''}</div></section>` : `<section class="result-overview panel"><div class="result-score" style="--progress:${result.percent}%"><div><strong>${result.total}<small>/46</small></strong><span>Skor A–D</span></div></div><div class="result-summary"><span class="eyebrow">TINJAUAN TES TERTULIS</span><h2>${esc(e.review.label)}</h2><p>${result.minimumsMet ? 'Semua batas minimum A–D terpenuhi.' : 'Ada bagian A–D yang belum memenuhi batas minimum.'} ${e.interviewSummary.complete ? 'Wawancara telah dinilai.' : 'Lengkapi wawancara sebelum mengambil keputusan akhir.'}</p><div class="result-summary-tags">${badge(`${result.answered}/48 terjawab`, 'gray')}${badge(e.finishReason === 'timeout' ? 'Waktu ujian habis' : 'Dikirim peserta', e.finishReason === 'timeout' ? 'amber' : 'green')}</div></div><div class="decision-box"><span>Keputusan penguji</span><strong>${esc(decisionLabel[e.decision])}</strong><small>Ditentukan secara manual</small></div></section><div class="detail-tabs tabs"><button data-action="detail-tab" data-tab="analysis" class="tab ${state.detailTab === 'analysis' ? 'active' : ''}">Analisis & skor</button><button data-action="detail-tab" data-tab="answers" class="tab ${state.detailTab === 'answers' ? 'active' : ''}">Rincian jawaban</button><button data-action="detail-tab" data-tab="interview" class="tab ${state.detailTab === 'interview' ? 'active' : ''}">Wawancara & keputusan <span>${e.interviewSummary.count}/6</span></button></div>${state.detailTab === 'answers' ? answersView(result, e.questionOrder) : state.detailTab === 'interview' ? interviewView(e) : analysisView(result)}`}`;
 }
 function analysisView(result) {
   return `<div class="analysis-grid"><section class="panel"><div class="panel-heading"><div><h2>Kemampuan & situasional</h2><p>Skor A–D dan batas minimum untuk ${esc(roleName(state.detail.role))}.</p></div></div><div class="score-bars">${result.sections.map(s => `<div class="score-bar-row"><div class="score-bar-label"><span><span class="section-letter">${s.id}</span>${s.short}</span><strong>${s.score}<small>/${s.max}</small></strong></div><div class="bar-track"><div class="bar-fill ${s.meetsMinimum ? '' : 'amber'}" style="width:${s.score / s.max * 100}%"></div><span class="bar-marker" style="left:${s.minimum / s.max * 100}%" title="Batas minimum ${s.minimum}"></span></div><div class="bar-caption"><span>Minimum ${s.minimum}</span><span class="${s.meetsMinimum ? 'text-green' : 'text-amber'}">${s.meetsMinimum ? 'Memenuhi' : 'Perlu ditinjau'}</span></div></div>`).join('')}</div></section><section class="panel"><div class="panel-heading"><div><h2>Kepribadian kerja</h2><p>Skor per dimensi · bagian E</p></div>${badge(result.personality.valid ? 'Dapat didiskusikan' : 'Tidak ditafsirkan', result.personality.valid ? 'green' : 'amber')}</div><div class="dimension-list">${result.personality.dimensions.map(d => `<div class="dimension-row"><div><strong>${d.name}</strong><span>${esc(d.label)}</span></div><strong>${d.score ?? '—'}<small>/15</small></strong></div>`).join('')}</div><p class="panel-note">12–15 kuat · 9–11 cukup · ≤8 perlu digali.<br>${result.personality.valid ? 'Gunakan sebagai bahan diskusi wawancara.' : 'Abaikan interpretasi E jika validitas bermasalah atau jawaban belum lengkap.'}</p></section></div><section class="panel"><div class="panel-heading"><div><h2>Hal yang perlu didiskusikan</h2><p>Gunakan temuan berikut untuk klarifikasi, bukan untuk menyimpulkan sifat seseorang.</p></div></div><div class="findings">${result.flags.length ? result.flags.map(f => `<div class="finding">${icon('alert')}<div><strong>${esc(f.question)} · ${f.type === 'integritas' ? 'Klarifikasi integritas' : f.type === 'validitas' ? 'Validitas jawaban' : 'Bahan diskusi'}</strong><p>${esc(f.text)}</p></div></div>`).join('') : `<div class="finding positive">${icon('checkCircle')}<div><strong>Tidak ada indikator klarifikasi integritas yang terpicu</strong><p>Tetap silang-cek dengan bukti perilaku saat wawancara.</p></div></div>`}<div class="finding neutral">${icon('users')}<div><strong>Fokus sesuai posisi</strong><p>${esc(result.roleFocus)}</p></div></div></div></section><div class="notice">${icon('book')}<p>Hasil ini adalah bahan penilaian internal. Kuesioner kepribadian belum divalidasi secara statistik dan tidak menghasilkan diagnosis psikologis.</p></div>`;
@@ -221,8 +221,18 @@ function confirmAction(title, message, label = 'Lanjutkan', danger = false) {
 }
 function inviteModal(type = 'serviam') {
   const definition=state.meta.exams.find(e=>e.id===type) || state.meta.exams[0];
-  showModal('Ujian baru · Buat undangan', `<p class="modal-description">Pilih ujian, isi peserta, lalu bagikan tautan pribadi. Satu undangan memakai satu bank soal dan aturan penilaian.</p><form id="invite-form" class="stack-form"><label>Jenis ujian<select name="examType" id="invite-exam-type">${state.meta.exams.filter(e=>!e.archived).map(e=>`<option value="${e.id}" ${e.id===definition.id?'selected':''}>${esc(e.label)}</option>`).join('')}</select></label><p id="invite-exam-summary" class="muted">${definition.count} butir · ${definition.minutes} menit · ${esc(definition.company)}</p><label>Nama peserta<input name="name" placeholder="Nama lengkap peserta" minlength="2" maxlength="80" required /></label><label>Email peserta<input name="email" type="email" placeholder="peserta@email.com" autocomplete="email" maxlength="254" required /></label><div class="form-two-col"><label>Posisi<select name="role" id="invite-role">${definition.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select></label><label>Masa berlaku<select name="expiryDays"><option value="7">7 hari</option><option value="1">1 hari</option><option value="14">14 hari</option><option value="30">30 hari</option></select></label></div><p class="form-error" id="invite-error" role="alert"></p><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Batal</button><button class="button primary" type="submit">Buat undangan ${icon('arrow')}</button></div></form>`);
+  showModal('Ujian baru · Buat undangan', `<p class="modal-description">Pilih ujian, isi peserta, lalu bagikan tautan pribadi. Satu undangan memakai satu bank soal dan aturan penilaian.</p><form id="invite-form" class="stack-form"><label>Jenis ujian<select name="examType" id="invite-exam-type">${state.meta.exams.filter(e=>!e.archived).map(e=>`<option value="${e.id}" ${e.id===definition.id?'selected':''}>${esc(e.label)}</option>`).join('')}</select></label><p id="invite-exam-summary" class="muted">${definition.count} butir · ${definition.minutes} menit · ${esc(definition.company)}</p><label>Nama peserta<input name="name" placeholder="Nama lengkap peserta" minlength="2" maxlength="80" required /></label><label>Email peserta<input name="email" type="email" placeholder="peserta@email.com" autocomplete="email" maxlength="254" required /></label><div class="form-two-col"><label>Penempatan jabatan<select name="role" id="invite-role">${definition.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}<option value="__custom__">Tulis jabatan sendiri…</option></select></label><label>Masa berlaku<select name="expiryDays"><option value="7">7 hari</option><option value="1">1 hari</option><option value="14">14 hari</option><option value="30">30 hari</option></select></label></div><div id="invite-custom-position" hidden><label>Nama jabatan<input name="positionName" placeholder="Contoh: Analis Pengadaan" minlength="2" maxlength="80" disabled /></label><label>Acuan penilaian<select name="positionReference" id="invite-position-reference" disabled>${definition.roles.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select><small>Hasil dinilai memakai kriteria posisi acuan yang paling mendekati jabatan ini.</small></label></div><p class="form-error" id="invite-error" role="alert"></p><div class="modal-footer"><button class="button secondary" type="button" data-action="close-modal">Batal</button><button class="button primary" type="submit">Buat undangan ${icon('arrow')}</button></div></form>`);
   syncInvitationDefinition();
+}
+function syncInvitationPosition() {
+  const form = $('#invite-form');
+  if (!form) return;
+  const custom = form.elements.role.value === '__custom__';
+  $('#invite-custom-position').hidden = !custom;
+  form.elements.positionName.disabled = !custom;
+  form.elements.positionName.required = custom;
+  form.elements.positionReference.disabled = !custom;
+  form.elements.positionReference.required = custom;
 }
 function syncInvitationDefinition() {
   const form = $('#invite-form');
@@ -231,12 +241,21 @@ function syncInvitationDefinition() {
   if (!definition) throw new Error('Jenis ujian tidak tersedia. Pilih ulang jenis ujian.');
   const roles = form.elements.role;
   const selectedRole = roles.value;
-  if (roles.dataset.examType !== definition.id || !definition.roles.some(role => role.id === selectedRole)) {
-    roles.innerHTML = definition.roles.map(role => `<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('');
-    if (definition.roles.some(role => role.id === selectedRole)) roles.value = selectedRole;
+  const validRole = role => role === '__custom__' || definition.roles.some(item => item.id === role);
+  if (roles.dataset.examType !== definition.id || !validRole(selectedRole)) {
+    roles.innerHTML = definition.roles.map(role => `<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('') + '<option value="__custom__">Tulis jabatan sendiri…</option>';
+    if (validRole(selectedRole)) roles.value = selectedRole;
     roles.dataset.examType = definition.id;
   }
+  const reference = form.elements.positionReference;
+  if (reference.dataset.examType !== definition.id) {
+    const previous = reference.value;
+    reference.innerHTML = definition.roles.map(role => `<option value="${esc(role.id)}">${esc(role.name)}</option>`).join('');
+    if (definition.roles.some(role => role.id === previous)) reference.value = previous;
+    reference.dataset.examType = definition.id;
+  }
   $('#invite-exam-summary').textContent = `${definition.count} butir · ${definition.minutes} menit · ${definition.company}`;
+  syncInvitationPosition();
   return definition;
 }
 function catalogDates(exam) {
@@ -392,7 +411,7 @@ function renderExamError(message) {
   app.innerHTML=`<div class="exam-layout">${examHeader()}<main class="completion-content"><div class="completion-icon warning">${icon('lock')}</div><span class="eyebrow">AKSES UJIAN</span><h1>Akses tidak tersedia<span>.</span></h1><p>${esc(message)}</p><div class="notice">${icon('mail')}<p>Hubungi penguji jika Anda memerlukan bantuan. Tautan yang sudah digunakan tidak memberikan kesempatan ujian baru.</p></div></main></div>`;
 }
 
-app.addEventListener('input', event => {
+document.addEventListener('input', event => {
   const field=event.target;
   if (field.id==='search') {
     state.search=field.value;
@@ -401,12 +420,14 @@ app.addEventListener('input', event => {
     $('.table-footer').innerHTML=`${exams.length} peserta ditampilkan <span>Undangan tidak dikirim otomatis; bagikan tautan secara pribadi.</span>`;
   }
   if (field.id==='invite-exam-type') syncInvitationDefinition();
+  if (field.id==='invite-role') syncInvitationPosition();
   if (field.id==='text-answer') queueAnswer(field.dataset.question,field.value);
 });
-app.addEventListener('change', event => {
+document.addEventListener('change', event => {
   const field=event.target;
   if(field.id==='exam-scope'){state.examFilter=field.value;state.filter='all';state.search='';renderAdmin();return;}
   if(field.id==='invite-exam-type') syncInvitationDefinition();
+  if(field.id==='invite-role') syncInvitationPosition();
   if (field.matches('input[type="radio"][data-question]')) {
     const q=state.exam.questions.find(q=>q.id===field.dataset.question);
     queueAnswer(q.id,q.kind==='likert'?Number(field.value):field.value);
@@ -499,9 +520,16 @@ document.addEventListener('submit', async event => {
     }
     if (form.id==='invite-form') {
       const definition = syncInvitationDefinition();
-      if (!definition.roles.some(role => role.id === form.elements.role.value)) throw new Error('Pilih posisi yang sesuai dengan jenis ujian.');
+      const customPosition = form.elements.role.value === '__custom__';
+      const selectedRole = customPosition ? form.elements.positionReference.value : form.elements.role.value;
+      if (!definition.roles.some(role => role.id === selectedRole)) throw new Error('Pilih acuan penilaian yang sesuai dengan jenis ujian.');
       data.examType = definition.id;
-      data.role = form.elements.role.value;
+      data.role = selectedRole;
+      if (customPosition) {
+        data.positionName = form.elements.positionName.value.trim();
+        if (data.positionName.length < 2) throw new Error('Isi nama jabatan buatan sendiri, minimal 2 karakter.');
+      } else delete data.positionName;
+      delete data.positionReference;
       data.name = data.name.trim();
       data.email = data.email.trim().toLowerCase();
       const result=await api('/api/admin/exams','POST',{...data,expiryDays:Number(data.expiryDays)});

@@ -55,6 +55,25 @@ test('undangan memvalidasi posisi per ujian, metadata katalog, dokumen rahasia d
   assert.equal((await f.admin.call('/api/admin/source?examType=indo-artha&document=../../.env')).status,404);
   for(const path of ['/lib/indo-artha/bank.js','/docs/indo-artha/Panduan%20Penguji.docx']) assert.equal((await f.client().call(path)).status,404);
 });
+test('jabatan buatan sendiri tampil pada undangan dan memakai acuan penilaian yang dipilih',async t=>{
+  const f=await fixture(t);
+  const body={name:'Peserta K3',email:'k3@example.test',examType:'indo-artha',role:'prod-staf',positionName:'Koordinator K3'};
+  const created=await f.admin.call('/api/admin/exams','POST',body);
+  assert.equal(created.status,201);
+  assert.equal(created.data.exam.roleName,'Koordinator K3');
+  assert.equal(created.data.exam.scoringRoleName,'Staf Produksi / QC');
+  assert.equal(created.data.exam.role,'prod-staf');
+  const saved=f.app.store.getExam(created.data.exam.id);
+  assert.equal(saved.position_name,'Koordinator K3');
+  const token=created.data.invitationPath.split('/').at(-1);
+  const publicInvite=await f.client().call('/api/invitations/'+token);
+  assert.equal(publicInvite.data.invitation.role,'Koordinator K3');
+  assert.equal((await f.admin.call('/api/admin/exams/'+created.data.exam.id)).data.exam.result,null);
+  assert.equal((await f.admin.call('/api/admin/exams','POST',{...body,positionName:'  '})).status,400);
+  assert.equal((await f.admin.call('/api/admin/exams','POST',{...body,role:'umum'})).status,400);
+  await f.restart();
+  assert.equal((await f.admin.call('/api/admin/exams/'+created.data.exam.id)).data.exam.roleName,'Koordinator K3');
+});
 
 test('ujian Indo Artha lengkap: 82 jawaban, jeda terkunci, resume, hasil tiga model, keputusan dan CSV',async t=>{
   const f=await fixture(t), invitation=await f.invite(),p=f.client();

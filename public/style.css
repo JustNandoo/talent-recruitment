@@ -111,3 +111,6 @@
 .page-heading:has(.report-action) { flex-wrap:wrap; gap:16px; }
 .heading-actions:has(.report-action) { max-width:none; flex-wrap:wrap; }
 .heading-actions .button.report-action { display:inline-flex; }
+
+#invite-custom-position{display:grid;gap:14px;padding:15px;border:1px solid var(--border);border-radius:9px;background:#f8faf7}
+#invite-custom-position[hidden]{display:none}
