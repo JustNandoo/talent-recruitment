@@ -18,6 +18,14 @@ test('Indo Artha: TIU/kognitif dan gaya kerja tidak saling mengubah, jawaban Ser
  assert.equal(onlyTIU.personality.complete,false);assert.equal(onlyTIU.personality.valid,false);
  assert.ok(onlyTIU.personality.dimensions.every(d=>d.score===null));
 });
+test('rincian kasus situasional menjelaskan jawaban dan kode pada masing-masing soal',()=>{
+ const result=scoreForExam(record('indo-artha',{'M3-1':'B','M3-2':'D'}));
+ const cases=result.sections.find(s=>s.id==='M3').details;
+ assert.match(cases[0].analysis,/Kasus 1 \(Integritas, keuangan\).*pilihan B bernilai 0\/3.*Pelanggaran etika.*red flag/);
+ assert.match(cases[1].analysis,/Kasus 2 \(Integritas, keuangan\).*pilihan D bernilai 3\/3.*Ideal/);
+ assert.notEqual(cases[0].analysis,cases[1].analysis);
+ assert.match(cases[2].analysis,/Kasus 3.*belum dijawab/);
+});
 test('Serviam, Indo lengkap, ringkas dan custom hanya menghitung butir paket masing-masing',()=>{
  const answers={...ideal('indo-artha'),...ideal('serviam'),'S1-Q1':'B'};
  for(const type of ['serviam','indo-artha','indo-artha-ringkas']){
